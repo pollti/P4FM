@@ -26,7 +26,7 @@ def denoise_audio(signal: np.ndarray) -> np.ndarray:
 
 def read_audio(filename: str) -> Tuple[np.ndarray, np.ndarray, float]:
     """
-    :TODO: make it work with stereo/mono
+    :TODO: make it work with different stereo signals
     Reads Wave-Files 
     :param filename: path to file from media folder, without the .wav ending
     :returns: shape:(T,) all the sampled times as floats
@@ -36,7 +36,9 @@ def read_audio(filename: str) -> Tuple[np.ndarray, np.ndarray, float]:
     rate, data = scipy.io.wavfile.read(f'../media/{filename}.wav')
     time_step = 1 / rate
     time_vec = np.arange(0, data.shape[0]) * time_step
-    return time_vec, data[:, 0], rate
+    if len(data.shape) == 2:
+        data = data[:, 0]
+    return time_vec, data, rate
 
 
 def generate_exemplary_audio() -> Tuple[np.ndarray, np.ndarray, float]:
@@ -76,6 +78,9 @@ def plot_spectrogram(signal: np.ndarray, rate: float, caption: str) -> None:
     """
     freqs, times, spectrogram = scp.signal.spectrogram(signal, fs=rate)
 
+    # prevent zero values
+    spectrogram[spectrogram <= 0] = 1e-5
+
     fig, ax = plt.subplots()
     tmp = ax.contourf(times, freqs, spectrogram, 10.0 ** np.arange(-6, 6), locator=ticker.LogLocator(), cmap=plt.get_cmap('jet'))
     # plt.clim(10^(-12),10)
@@ -106,12 +111,12 @@ def main():
         plot_signal(time_vec, noise_signal, filename + '_noise')
         plot_spectrogram(noise_signal, rate, filename + '_noise')
 
-    for ending in ['original', 'noise', 'ton']:
+    for ending in ['original']:  # , 'noise', 'ton']:
         filename = f'test01_{ending}'
         time_vec, signal, rate = read_audio(filename)  # generate_exemplary_audio()
         # plot_signal(time_vec, signal, filename)
         plot_spectrogram(signal, rate, filename)
-    
+
     input('Press enter to finish.')
 
 
