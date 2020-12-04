@@ -6,7 +6,11 @@ import scipy.io.wavfile
 import numpy as np
 import matplotlib_tuda
 import noisereduce as nr
+import progressbar
 from matplotlib import pyplot as plt, ticker
+from matplotlib.contour import QuadContourSet
+
+from src.plot_util import SubplotsAndSave
 
 matplotlib_tuda.load()
 
@@ -69,55 +73,109 @@ def plot_signal(time_vec: np.ndarray, signal: np.ndarray, caption: str) -> None:
     fig.show()
 
 
-def plot_spectrogram(signal: np.ndarray, rate: float, caption: str) -> None:
+def plot_spectrogram(signal: np.ndarray, rate: float, caption: str, ax, show_xlabel: bool, show_ylabel: bool, show_title: bool) -> QuadContourSet:
     """
-    Plots the spectogram.
+    Plots the spectrogram.
     :param signal: audio signal as int16 values
     :param rate: samplerate as float
     :param caption: The caption for the plot as String
+    :param ax: Axes for subplot returning
+    :param show_xlabel: whether to include an x label in subplot. Mostly only intended for last row.
+    :param show_ylabel: whether to include an y label in subplot. Mostly only intended for first column.
+    :param show_title: whether to include title in subplot. Mostly only intended for first row.
+    :returns: subplot axes
     """
     freqs, times, spectrogram = scp.signal.spectrogram(signal, fs=rate)
 
     # prevent zero values
     spectrogram[spectrogram <= 0] = 1e-5
 
-    fig, ax = plt.subplots()
-    tmp = ax.contourf(times, freqs, spectrogram, 10.0 ** np.arange(-6, 6), locator=ticker.LogLocator(), cmap=plt.get_cmap('jet'))
-    # plt.clim(10^(-12),10)
-    fig.colorbar(tmp)
-    ax.set_title(f'Spectrogram ({caption})')
-    ax.set_ylabel('Frequency band')
+    c = ax.contourf(times, freqs, spectrogram, 10.0 ** np.arange(-6, 6), locator=ticker.LogLocator(), cmap=plt.get_cmap('jet'))
+    if show_title:
+        ax.set_title(f'Spectrogram ({caption})')
+    if show_xlabel:
+        ax.set_xlabel('Time window')
+    if show_ylabel:
+        ax.set_ylabel('Frequency band')
     # ax.set_yscale('log')
     plt.ylim(ymax=10000, ymin=0)
-    ax.set_xlabel('Time window')
-    fig.show()
+    return c
+
+
+def main_plot_file(filenames, graphname: str, show_graph):
+    """
+    Generates required files (denoised, noise) and plots spectrograms.
+    :param filenames: files to process as list. Files are rows.
+    :param graphname: name of the saved plot file
+    :param show_graph: list of plots and files to generate as booleans. [orig, denoised, noise]
+    :return:
+    """
+    print('Generating plots for specified files. This may take a while.')
+    plottypes = show_graph.count(True)
+    with SubplotsAndSave('../res', graphname, nrows=len(filenames), ncols=plottypes + 1, sharey='all', file_types=['png']) as (fig, axs):
+        bar = progressbar.ProgressBar(widgets=['Creating plot: ', progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()],
+                                      maxval=plottypes * len(filenames)).start()
+        for i, filename in enumerate(filenames):
+            time_vec, signal, rate = read_audio(filename)  # generate_exemplary_audio()
+
+            if (show_graph[0]):
+                # plot_signal(time_vec, signal, filename)
+                c = plot_spectrogram(signal, rate, 'original', axs[i, 0], i == plottypes - 1, True, i == 0)
+                bar.update(i * len(filenames) + 1)
+
+            if (show_graph[0] | show_graph[1]):
+                denoised_signal = denoise_audio(signal)
+
+            if (show_graph[1]):
+                scipy.io.wavfile.write(f'../media/{filename}_denoised_generated.wav', rate, denoised_signal)
+                # plot_signal(time_vec, denoised_signal, filename + '_den')
+                c = plot_spectrogram(denoised_signal, rate, 'denoised', axs[i, + show_graph[:1].count(True)], i == plottypes - 1, not show_graph[0], i == 0)
+                bar.update(i * len(filenames) + show_graph[:1].count(True) + 1)
+
+            if (show_graph[2]):
+                noise_signal = signal - denoised_signal
+                scipy.io.wavfile.write(f'../media/{filename}_noiseonly_generated.wav', rate, noise_signal)
+                # plot_signal(time_vec, noise_signal, filename + '_noise')
+                c = plot_spectrogram(noise_signal, rate, 'noise', axs[i, + show_graph[:2].count(True)], i == plottypes - 1, not (show_graph[0] | show_graph[1]), i == 0)
+                bar.update(i * len(filenames) + show_graph[:2].count(True) + 1)
+
+        bar.finish()
+        print('Saving files to disk. Please stand by.')
+        cbar_ax = fig.add_axes([0.9, 0.15, 0.05, 0.7])  # left, bottom, width, height in percent
+        fig.colorbar(c, cax=cbar_ax)
+        fig.show()
+
+
+def main_plot_place_comparision():
+    print('Generating plots for places. This may take a while.')
+
+    c = None
+    # Recording places
+    places = ['Fabi', 'Platz', 'Street', 'Tim', 'Treppe', 'Wald']
+    # Recording ids
+    ids = ['01', '02', '03', '04', '05']
+    with SubplotsAndSave('../res', 'noiseenvs', nrows=len(ids), ncols=len(places) + 1, sharey='all', file_types=['png']) as (fig, axs):
+        bar = progressbar.ProgressBar(widgets=['Creating plot: ', progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()], maxval=len(places) * len(ids)).start()
+        for i, end in enumerate(ids):
+            for j, name in enumerate(places):
+                filename = f'live/{name}{end}'
+                time_vec, signal, rate = read_audio(filename)
+
+                denoised_signal = denoise_audio(signal)
+
+                noise_signal = signal - denoised_signal
+                c = plot_spectrogram(noise_signal, rate, name + ', Noise', axs[i, j], i == len(ids) - 1, j == 0, i == 0)
+                bar.update(i * len(places) + j + 1)
+        bar.finish()
+        print('Saving files to disk. Please stand by.')
+        cbar_ax = fig.add_axes([0.9, 0.15, 0.05, 0.7])  # left, bottom, width, height in percent
+        fig.colorbar(c, cax=cbar_ax)
+        fig.show()
 
 
 def main():
-    # Generate plots for different file stadiums
-    print('Generating plots. This may take a while.')
-
-    for ending in ['original']:
-        filename = f'test01_{ending}'
-        time_vec, signal, rate = read_audio(filename)
-
-        denoised_signal = denoise_audio(signal)
-        scipy.io.wavfile.write(f'../media/{filename}_denoised_generated.wav', rate, denoised_signal)
-        plot_signal(time_vec, denoised_signal, filename + '_den')
-        plot_spectrogram(denoised_signal, rate, filename + '_den')
-
-        noise_signal = signal - denoised_signal
-        scipy.io.wavfile.write(f'../media/{filename}_noiseonly_generated.wav', rate, noise_signal)
-        plot_signal(time_vec, noise_signal, filename + '_noise')
-        plot_spectrogram(noise_signal, rate, filename + '_noise')
-
-    for ending in ['original']:  # , 'noise', 'ton']:
-        filename = f'test01_{ending}'
-        time_vec, signal, rate = read_audio(filename)  # generate_exemplary_audio()
-        # plot_signal(time_vec, signal, filename)
-        plot_spectrogram(signal, rate, filename)
-
-    input('Press enter to finish.')
+    main_plot_place_comparision()
+    main_plot_file(['tmp', 'tmp2'], 'plottest', [True, True, True])
 
 
 if __name__ == '__main__':
