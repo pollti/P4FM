@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib_tuda
 import noisereduce as nr
 import progressbar
+import webrtcvad
 from matplotlib import pyplot as plt, ticker
 from matplotlib.contour import QuadContourSet
 
@@ -15,17 +16,91 @@ from src.plot_util import SubplotsAndSave
 matplotlib_tuda.load()
 
 
-def denoise_audio(signal: np.ndarray) -> np.ndarray:
+def get_speach_postions(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, int]:
     """
-    :TODO: recognize the noise to automate the denoising.
+    Searches pure noise intervals. Somewhat configurable here.
+    :param signal: signal to search in
+    :param rate: sample rate of audio file
+    :return: boolean whether frame contains speach (False -> pure noise)
+    """
+    # Integer sets filter aggressiveness. 0 classifies less as pure noise than 1 < 2 < 3. Change with vad.set_mode(1).
+    vad = webrtcvad.Vad(0)
+    samples_per_second = rate
+    # TODO: Improve fallback.
+    if samples_per_second != 48000:
+        print(f' WARNING: Unexpected rate in noise position detection: {samples_per_second}. Falling back to 48000')
+        samples_per_second = 48000
+    samples_per_frame = samples_per_second // 100
+    frame_count = signal.size // samples_per_frame
+    splits = np.arange(samples_per_frame, samples_per_frame * (frame_count + 1), samples_per_frame, int)
+    res = np.full(frame_count, False)
+    for i, frame in enumerate(np.array_split(signal, splits)[:frame_count]):
+        is_speach = vad.is_speech(frame.tobytes(), samples_per_second)
+        if is_speach:
+            res[i] = True
+        #    print('Speech detected in segment.')
+        # else:
+        #    print('Only noise found in segment.')
+    return res, samples_per_frame
+
+
+def get_noise_intervals(signal: np.ndarray, rate: int) -> np.ndarray:
+    """
+    Returns intervals of pure noise in audio file.
+    :param signal: the signal to search in
+    :param rate: the samplerate
+    :return: array of start and end points of intervals
+    """
+    speach, spf = get_speach_postions(signal, rate)
+    res = []
+    current_state = True
+    start = 0
+    for i, el in enumerate(speach):
+        if current_state:
+            if not el:
+                current_state = False
+                start = spf * i
+        else:
+            if el:
+                current_state = True
+                res.append([start, i * spf])
+    return np.asarray(res)
+
+
+def get_largest_noise_interval(intervals: np.ndarray) -> Tuple[int, int]:
+    """"
+    Returns largest of an array of intervals. Used to find pure noise interval.
+    :param intervals: intervals as array
+    :returns: starting point of largest interval
+    :returns: end point of largest interval
+    """
+    largest_size = 0
+    start = 0
+    end = 0
+    for a, b in intervals:
+        if b - a > largest_size:
+            start = a
+            end = b
+            largest_size = b - a
+    return start, end
+
+
+def denoise_audio(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, np.ndarray, int, int]:
+    """
     Denoises given audio signal.
     :param signal: audio signal as int16 values
+    :param rate: audio sample rate in samples per second
     :returns: denoised audio signal as int16 values
+    :returns: intervals of pure noise
+    :returns: start of used noise interval
+    :returns: end of used noise interval
     """
-    noisy_part = signal[:3 * 44100]
+    intervals = get_noise_intervals(signal, rate)
+    a, b = get_largest_noise_interval(intervals)
+    noisy_part = signal[a:b]
     # perform noise reduction
     reduced_noise = nr.reduce_noise(audio_clip=signal.astype(np.float16), noise_clip=noisy_part.astype(np.float16), verbose=False).astype(np.int16)
-    return reduced_noise
+    return reduced_noise, intervals, a, b
 
 
 def read_audio(filename: str) -> Tuple[np.ndarray, np.ndarray, float]:
@@ -98,6 +173,7 @@ def plot_spectrogram(signal: np.ndarray, rate: float, caption: str, ax, show_xla
     if show_ylabel:
         ax.set_ylabel('Frequency band')
     # ax.set_yscale('log')
+    plt.xlim(xmin=times[0], xmax=times[-1])
     plt.ylim(ymax=10000, ymin=0)
     return c
 
@@ -123,8 +199,8 @@ def main_plot_file(filenames, graphname: str, show_graph):
                 c = plot_spectrogram(signal, rate, 'original', axs[i, 0], i == plottypes - 1, True, i == 0)
                 bar.update(i * len(filenames) + 1)
 
-            if (show_graph[0] | show_graph[1]):
-                denoised_signal = denoise_audio(signal)
+            if (show_graph[0] or show_graph[1]):
+                denoised_signal, _, _, _ = denoise_audio(signal, rate)
 
             if (show_graph[1]):
                 scipy.io.wavfile.write(f'../media/{filename}_denoised_generated.wav', rate, denoised_signal)
@@ -161,10 +237,30 @@ def main_plot_place_comparision():
                 filename = f'live/{name}{end}'
                 time_vec, signal, rate = read_audio(filename)
 
-                denoised_signal = denoise_audio(signal)
+                denoised_signal, intervals, a, b = denoise_audio(signal, rate)
 
                 noise_signal = signal - denoised_signal
-                c = plot_spectrogram(noise_signal, rate, name + ', Noise', axs[i, j], i == len(ids) - 1, j == 0, i == 0)
+                ax = axs[i, j]
+                c = plot_spectrogram(noise_signal, rate, name + ', Noise', ax, i == len(ids) - 1, j == 0, i == 0)
+                # Noise and speach lines at plot top.
+                line_y = 9980
+
+                for k, (interval_start, interval_end) in enumerate(intervals):
+                    # Assume no noise from beginning of time.
+                    if k == 0:
+                        ax.plot((time_vec[0], time_vec[interval_start]), (line_y, line_y), color='tuda:green', zorder=10)
+                    # Assume no noise between intervals.
+                    if k > 0:
+                        ax.plot((time_vec[intervals[k - 1][1]], time_vec[interval_start]), (line_y, line_y), color='tuda:green', zorder=100)
+                    # Assume no noise to end of time.
+                    if k == intervals.shape[0] - 1:
+                        ax.plot((time_vec[interval_end], time_vec[-1]), (line_y, line_y), color='tuda:green', zorder=10)
+                    ax.plot((time_vec[interval_start], time_vec[interval_end]), (line_y, line_y), color='tuda:red', zorder=100)
+                ax.plot((time_vec[b], time_vec[a]), (line_y, line_y), color='black', zorder=100)
+                # verticalines if needed
+                # for interval in intervals:
+                #    ax.axvline(interval[0] / rate, color='tuda:green', ls='dotted')
+                #    ax.axvline(interval[1] / rate, color='tuda:red', ls='dashed')
                 bar.update(i * len(places) + j + 1)
         bar.finish()
         print('Saving files to disk. Please stand by.')
@@ -175,7 +271,7 @@ def main_plot_place_comparision():
 
 def main():
     main_plot_place_comparision()
-    main_plot_file(['tmp', 'tmp2'], 'plottest', [True, True, True])
+    main_plot_file(['tmp', 'tmp2', 'live/Street01'], 'plottest', [True, True, True])
 
 
 if __name__ == '__main__':
