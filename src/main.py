@@ -26,10 +26,11 @@ def get_speach_postions(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, in
     # Integer sets filter aggressiveness. 0 classifies less as pure noise than 1 < 2 < 3. Change with vad.set_mode(1).
     vad = webrtcvad.Vad(0)
     samples_per_second = rate
-    # TODO: Improve fallback.
-    if samples_per_second != 48000:
-        print(f' WARNING: Unexpected rate in noise position detection: {samples_per_second}. Falling back to 48000')
-        samples_per_second = 48000
+    sample_rates = np.asarray([8000, 16000, 32000, 48000])
+    if not (samples_per_second in sample_rates):
+        new_sps = sample_rates[(np.abs(sample_rates - samples_per_second)).argmin()]
+        print(f' WARNING: Unexpected rate in noise position detection: {samples_per_second}. Falling back to {new_sps}')
+        samples_per_second = new_sps
     samples_per_frame = samples_per_second // 100
     frame_count = signal.size // samples_per_frame
     splits = np.arange(samples_per_frame, samples_per_frame * (frame_count + 1), samples_per_frame, int)
@@ -196,7 +197,32 @@ def main_plot_file(filenames, graphname: str, show_graph):
 
             if (show_graph[0]):
                 # plot_signal(time_vec, signal, filename)
-                c = plot_spectrogram(signal, rate, 'original', axs[i, 0], i == plottypes - 1, True, i == 0)
+                ax = axs[i, 0]
+                c = plot_spectrogram(signal, rate, 'original', ax, i == plottypes - 1, True, i == 0)
+
+                # Noise and speach lines at plot top.
+                line_y = 9980
+
+                intervals = get_noise_intervals(signal, rate)
+                a, b = get_largest_noise_interval(intervals)
+
+                for k, (interval_start, interval_end) in enumerate(intervals):
+                    # Assume no noise from beginning of time.
+                    if k == 0:
+                        ax.plot((time_vec[0], time_vec[interval_start]), (line_y, line_y), color='tuda:green', zorder=10)
+                    # Assume no noise between intervals.
+                    if k > 0:
+                        ax.plot((time_vec[intervals[k - 1][1]], time_vec[interval_start]), (line_y, line_y), color='tuda:green', zorder=100)
+                    # Assume no noise to end of time.
+                    if k == intervals.shape[0] - 1:
+                        ax.plot((time_vec[interval_end], time_vec[-1]), (line_y, line_y), color='tuda:green', zorder=10)
+                    ax.plot((time_vec[interval_start], time_vec[interval_end]), (line_y, line_y), color='tuda:red', zorder=100)
+                ax.plot((time_vec[b], time_vec[a]), (line_y, line_y), color='black', zorder=100)
+                # verticalines if needed
+                # for interval in intervals:
+                #    ax.axvline(interval[0] / rate, color='tuda:green', ls='dotted')
+                #    ax.axvline(interval[1] / rate, color='tuda:red', ls='dashed')
+
                 bar.update(i * len(filenames) + 1)
 
             if (show_graph[0] or show_graph[1]):
