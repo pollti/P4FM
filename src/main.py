@@ -115,7 +115,7 @@ def read_audio(filename: str) -> Tuple[np.ndarray, np.ndarray, float]:
     :returns: shape:(S,) the samples of the left stereoline as int16 values
     :returns: samplerate as float
     """
-    rate, data = scipy.io.wavfile.read(f'../media/{filename}.wav')
+    rate, data = scipy.io.wavfile.read(f'media/{filename}.wav')
     time_step = 1 / rate
     time_vec = np.arange(0, data.shape[0]) * time_step
     if len(data.shape) == 2:
@@ -303,14 +303,14 @@ def main():
         eingabe = input('Please give a filename or nothing to terminate: Press enter to finish.')
         eingabeListe = eingabe.split(" ")
         if (not eingabeListe): #ergibt True falls Liste keine Einträge hat
-            quit(1)#TODO: Returncodes
+            quit(1)#TODO: Returncodes & fix list with empty string
     else:
         eingabeListe = sys.argv[1:]
                
     for name in eingabeListe:
         print(name)
-    main_plot_place_comparision()
-    main_plot_file(['tmp', 'tmp2', 'live/Street01'], 'plottest', [True, True, True])
+    #main_plot_place_comparision()
+    main_plot_file(['tmp2', 'tmp2_noiseonly_generated'], 'plottest', [True, True, True])
 
 
 if __name__ == '__main__':

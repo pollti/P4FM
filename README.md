@@ -18,5 +18,7 @@ Run main.py. In main(), functionalities can be disabled and parameters for files
 ## Folder strucutre
 
 /src: Source code
+
 /media: Audio files
+
 /res: Results (image and pdf files for spectrograms)
