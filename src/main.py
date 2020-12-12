@@ -13,17 +13,18 @@ import webrtcvad
 from matplotlib import pyplot as plt, ticker
 from matplotlib.contour import QuadContourSet
 
+from src.multiband_spectral_substraction import segment
 from src.plot_util import SubplotsAndSave
 
 matplotlib_tuda.load()
 
 
-def get_speach_postions(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, int]:
+def get_speech_postions(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, int]:
     """
     Searches pure noise intervals. Somewhat configurable here.
     :param signal: signal to search in
     :param rate: sample rate of audio file
-    :return: boolean whether frame contains speach (False -> pure noise)
+    :return: boolean whether frame contains speech (False -> pure noise)
     """
     # Integer sets filter aggressiveness. 0 classifies less as pure noise than 1 < 2 < 3. Change with vad.set_mode(1).
     vad = webrtcvad.Vad(0)
@@ -38,8 +39,8 @@ def get_speach_postions(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, in
     splits = np.arange(samples_per_frame, samples_per_frame * (frame_count + 1), samples_per_frame, int)
     res = np.full(frame_count, False)
     for i, frame in enumerate(np.array_split(signal, splits)[:frame_count]):
-        is_speach = vad.is_speech(frame.tobytes(), samples_per_second)
-        if is_speach:
+        speech = vad.is_speech(frame.tobytes(), samples_per_second)
+        if speech:
             res[i] = True
         #    print('Speech detected in segment.')
         # else:
@@ -54,11 +55,11 @@ def get_noise_intervals(signal: np.ndarray, rate: int) -> np.ndarray:
     :param rate: the samplerate
     :return: array of start and end points of intervals
     """
-    speach, spf = get_speach_postions(signal, rate)
+    speech, spf = get_speech_postions(signal, rate)
     res = []
     current_state = True
     start = 0
-    for i, el in enumerate(speach):
+    for i, el in enumerate(speech):
         if current_state:
             if not el:
                 current_state = False
@@ -298,18 +299,21 @@ def main_plot_place_comparision():
 
 
 def main():
+    time_vec, signal, rate = read_audio('tmp')
+    segment(signal[:44100], 256)
+
     eingabeListe = []
-    if (len(sys.argv)<2):
+    if (len(sys.argv) < 2):
         eingabe = input('Please give a filename or nothing to terminate: Press enter to finish.')
         eingabeListe = eingabe.split(" ")
-        if (not eingabeListe): #ergibt True falls Liste keine Einträge hat
-            quit(1)#TODO: Returncodes & fix list with empty string
+        if (not eingabeListe):  # ergibt True falls Liste keine Einträge hat
+            quit(1)  # TODO: Returncodes & fix list with empty string
     else:
         eingabeListe = sys.argv[1:]
-               
+
     for name in eingabeListe:
         print(name)
-    #main_plot_place_comparision()
+    main_plot_place_comparision()
     main_plot_file(['tmp2', 'tmp2_noiseonly_generated'], 'plottest', [True, True, True])
 
 
