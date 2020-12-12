@@ -1,5 +1,7 @@
 from typing import Tuple
 
+import sys
+
 import scipy as scp
 import scipy.signal
 import scipy.io.wavfile
@@ -296,6 +298,17 @@ def main_plot_place_comparision():
 
 
 def main():
+    eingabeListe = []
+    if (len(sys.argv)<2):
+        eingabe = input('Please give a filename or nothing to terminate: Press enter to finish.')
+        eingabeListe = eingabe.split(" ")
+        if (not eingabeListe): #ergibt True falls Liste keine Einträge hat
+            quit(1)#TODO: Returncodes
+    else:
+        eingabeListe = sys.argv[1:]
+               
+    for name in eingabeListe:
+        print(name)
     main_plot_place_comparision()
     main_plot_file(['tmp', 'tmp2', 'live/Street01'], 'plottest', [True, True, True])
 
