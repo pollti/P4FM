@@ -1,20 +1,68 @@
 from typing import Tuple
 
 import numpy as np
+from numpy import fft
 
 
-def SSMultibandKamath02(signal: np.ndaray, FS, IS: float = .25) -> np.ndarray:  # TODO: use noise detection replacing IS
-    W = int(.025 * FS)  # 25 ms sequences # TODO: replace by noise detection interval
+# import statsmodels
+
+
+def SSMultibandKamath02(signal: np.ndaray, fs, IS: float = .25) -> np.ndarray:  # TODO: use noise detection replacing IS
+    W = int(.025 * fs)  # 25 ms sequences # TODO: replace by noise detection interval
     nfft = W
     SP = .4  # Shift percentage is 40% (10ms)
     wnd = np.hamming(W)
 
-    NIS = int((IS * FS - W) / (SP * W) + 1)  # number of initial silence segments # TODO: replace
-    Gamma = 2 # Magnitude Power (1 for magnitude spectral subtraction 2 for power spectrum subtraction)
+    NIS = int((IS * fs - W) / (SP * W) + 1)  # number of initial silence segments # TODO: replace everywhere NIS
+    Gamma = 2  # Magnitude Power (1 for magnitude spectral subtraction 2 for power spectrum subtraction)
 
     # TODO: unimplemented part: https://viewer.mathworks.com/?viewer=plain_code&url=https%3A%2F%2Fde.mathworks.com%2Fmatlabcentral%2Fmlc-downloads%2Fdownloads%2Fsubmissions%2F7674%2Fversions%2F1%2Fcontents%2FSSMultibandKamath02.m
 
-    return signal
+    unknown = []
+    unknown2 = 4
+    # y = statsmodels.tsa.ar_model.AutoReg(unknown, unknown2).fit()  # TODO fix
+    y = segment(signal, W, SP, wnd)
+    Y = np.fft.fft(y, nfft)
+    YPhase = np.angle(Y[0:(Y.size / 2).floor + 1, :])  # Noisy Speech Phase # TODO: off-by-1?
+    Y = np.power(np.abs(Y[0:(Y.size / 2).floor + 1, :]), Gamma)  # TODO: off-by-1?
+    numberOfFrames = Y.shape[1]
+    FreqResol = Y.shape[0]
+
+    N = np.mean(Y[:, 0: NIS], 1).T  # initial Noise Power Spectrum mean
+
+    NoiseCounter = 0
+    NoiseLength = 9  # This is a smoothing factor for the noise updating
+
+    Beta = .03
+    minalpha = 1
+    maxalpha = 5
+    minSNR = -5
+    maxSNR = 20
+    alphaSlope = (minalpha - maxalpha) / (maxSNR - minSNR)
+    alphaShift = maxalpha - alphaSlope * minSNR
+    BN = Beta * N
+
+    # Delta is a frequency dependent coefficient
+    Delta = 1.5 * np.ones(BN.size)
+    Delta[0:((-2000 + fs / 2) * FreqResol * 2 / fs).floor] = 2.5;  # if the frequency is lower than FS/2 - 2KHz # TODO: ob1?
+    Delta[0:(1000 * FreqResol * 2 / fs).floor] = 1;  # if the frequency is lower than 1KHz # TODO: ob1?
+    for i in range(0, numberOfFrames):
+        [NoiseFlag, SpeechFlag, NoiseCounter, Dist] = vad(np.power(Y[:, i], (1 / Gamma)), np.power(N, (1 / Gamma)), NoiseCounter)  # Magnitude Spectrum Distance VAD
+        if SpeechFlag == 0:
+            N = (NoiseLength * N + Y[:, i]) / (NoiseLength + 1)  # Update and smooth noise
+            BN = Beta * N
+
+        SNR = 10 * np - np.log(Y[:, i]) / N
+        alpha = alphaSlope * SNR + alphaShift
+        alpha = np.max(np.min(alpha, maxalpha), minalpha)
+
+        D = Y[:, i] - np.multiply(np.multiply(Delta, alpha), N)  # Nonlinear (Non-uniform) Power Spectrum Subtraction
+
+        X[:, i] = np.max(D, BN);  # if BY>D X=BY else X=D which sets very small values of subtraction result to an attenuated version of the input power spectrum.
+
+    output = OverlapAdd2(np.pow(X, (1 / Gamma)), YPhase, W, SP * W);
+
+    return output
 
 
 def OverlapAdd2(xnew: np.ndarray, yphase: np.ndarray = None, window_len: int = None, shift_len: int = None) -> np.ndarray:
