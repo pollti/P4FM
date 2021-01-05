@@ -15,6 +15,7 @@ from matplotlib.contour import QuadContourSet
 
 from src.multiband_spectral_substraction import segment
 from src.plot_util import SubplotsAndSave
+from src.multiband_spectral_substraction import SSMultibandKamath02
 
 matplotlib_tuda.load()
 
@@ -89,7 +90,7 @@ def get_largest_noise_interval(intervals: np.ndarray) -> Tuple[int, int]:
     return start, end
 
 
-def denoise_audio(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, np.ndarray, int, int]:
+def denoise_audio(signal: np.ndarray, rate: int) -> Tuple[np.ndarray, np.ndarray, int, int]:
     """
     Denoises given audio signal.
     :param signal: audio signal as int16 values
@@ -107,7 +108,7 @@ def denoise_audio(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, np.ndarr
     return reduced_noise, intervals, a, b
 
 
-def read_audio(filename: str) -> Tuple[np.ndarray, np.ndarray, float]:
+def read_audio(filename: str) -> Tuple[np.ndarray, np.ndarray, int]:
     """
     :TODO: make it work with different stereo signals
     Reads Wave-Files 
@@ -121,7 +122,7 @@ def read_audio(filename: str) -> Tuple[np.ndarray, np.ndarray, float]:
     time_vec = np.arange(0, data.shape[0]) * time_step
     if len(data.shape) == 2:
         data = data[:, 0]
-    return time_vec, data, rate
+    return time_vec, data, int(rate)
 
 
 def generate_exemplary_audio() -> Tuple[np.ndarray, np.ndarray, float]:
@@ -192,13 +193,20 @@ def main_plot_file(filenames, graphname: str, show_graph):
     """
     print('Generating plots for specified files. This may take a while.')
     plottypes = show_graph.count(True)
-    with SubplotsAndSave('../res', graphname, nrows=len(filenames), ncols=plottypes + 1, sharey='all', file_types=['png']) as (fig, axs):
+    with SubplotsAndSave('res', graphname, nrows=len(filenames), ncols=plottypes + 1, sharey='all', file_types=['png']) as (fig, axs):
         bar = progressbar.ProgressBar(widgets=['Creating plot: ', progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()],
                                       maxval=plottypes * len(filenames)).start()
         for i, filename in enumerate(filenames):
             time_vec, signal, rate = read_audio(filename)  # generate_exemplary_audio()
+            #### START debugging shortener
+            fact = 1
+            end = rate
+            signal = signal[::fact]
+            time_vec = time_vec[::fact]
+            rate = int(rate / fact)
+            #### END debugging shortener
 
-            if (show_graph[0]):
+            if show_graph[0]:
                 # plot_signal(time_vec, signal, filename)
                 ax = axs[i, 0]
                 c = plot_spectrogram(signal, rate, 'original', ax, i == plottypes - 1, True, i == 0)
@@ -226,23 +234,31 @@ def main_plot_file(filenames, graphname: str, show_graph):
                 #    ax.axvline(interval[0] / rate, color='tuda:green', ls='dotted')
                 #    ax.axvline(interval[1] / rate, color='tuda:red', ls='dashed')
 
-                bar.update(i * len(filenames) + 1)
+                bar.update(i * plottypes + 1)
 
-            if (show_graph[0] or show_graph[1]):
+            if show_graph[0] or show_graph[1]:
                 denoised_signal, _, _, _ = denoise_audio(signal, rate)
 
-            if (show_graph[1]):
-                scipy.io.wavfile.write(f'../media/{filename}_denoised_generated.wav', rate, denoised_signal)
+            if show_graph[1]:
+                scipy.io.wavfile.write(f'media/{filename}_denoised_generated.wav', rate, denoised_signal)
                 # plot_signal(time_vec, denoised_signal, filename + '_den')
                 c = plot_spectrogram(denoised_signal, rate, 'denoised', axs[i, + show_graph[:1].count(True)], i == plottypes - 1, not show_graph[0], i == 0)
-                bar.update(i * len(filenames) + show_graph[:1].count(True) + 1)
+                bar.update(i * plottypes + show_graph[:1].count(True) + 1)
 
-            if (show_graph[2]):
-                noise_signal = signal - denoised_signal
-                scipy.io.wavfile.write(f'../media/{filename}_noiseonly_generated.wav', rate, noise_signal)
+            if show_graph[2]:
+                noise_signal = signal[:denoised_signal.size] - denoised_signal
+                noise2 = SSMultibandKamath02(noise_signal, rate, 5)
+                if i == 1:
+                    noise_signal[:noise2.size] += noise2
+                if i == 2:
+                    noise_signal[:noise2.size] -= noise2
+                    scipy.io.wavfile.write(f'media/{filename}_noiseonly_generated.wav', rate, noise_signal)
+                if i == 3:
+                    noise_signal = noise2
+                # scipy.io.wavfile.write(f'media/{filename}_noiseonly_generated.wav', rate, noise_signal)
                 # plot_signal(time_vec, noise_signal, filename + '_noise')
                 c = plot_spectrogram(noise_signal, rate, 'noise', axs[i, + show_graph[:2].count(True)], i == plottypes - 1, not (show_graph[0] | show_graph[1]), i == 0)
-                bar.update(i * len(filenames) + show_graph[:2].count(True) + 1)
+                bar.update(i * plottypes + show_graph[:2].count(True) + 1)
 
         bar.finish()
         print('Saving files to disk. Please stand by.')
@@ -251,7 +267,7 @@ def main_plot_file(filenames, graphname: str, show_graph):
         fig.show()
 
 
-def main_plot_place_comparision():
+def main_plot_place_comparision():  # TODO: crashes with only one file as parameter
     print('Generating plots for places. This may take a while.')
 
     c = None
@@ -259,7 +275,7 @@ def main_plot_place_comparision():
     places = ['Fabi', 'Platz', 'Street', 'Tim', 'Treppe', 'Wald']
     # Recording ids
     ids = ['01', '02', '03', '04', '05']
-    with SubplotsAndSave('../res', 'noiseenvs', nrows=len(ids), ncols=len(places) + 1, sharey='all', file_types=['png']) as (fig, axs):
+    with SubplotsAndSave('res', 'noiseenvs', nrows=len(ids), ncols=len(places) + 1, sharey='all', file_types=['png']) as (fig, axs):
         bar = progressbar.ProgressBar(widgets=['Creating plot: ', progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()], maxval=len(places) * len(ids)).start()
         for i, end in enumerate(ids):
             for j, name in enumerate(places):
@@ -302,11 +318,10 @@ def main():
     time_vec, signal, rate = read_audio('tmp')
     segment(signal[:44100], 256)
 
-    eingabeListe = []
-    if (len(sys.argv) < 2):
+    if len(sys.argv) < 2:
         eingabe = input('Please give a filename or nothing to terminate: Press enter to finish.')
         eingabeListe = eingabe.split(" ")
-        if (not eingabeListe):  # ergibt True falls Liste keine Einträge hat
+        if not eingabeListe:  # ergibt True falls Liste keine Einträge hat
             quit(1)  # TODO: Returncodes & fix list with empty string
     else:
         eingabeListe = sys.argv[1:]
@@ -314,7 +329,7 @@ def main():
     for name in eingabeListe:
         print(name)
     main_plot_place_comparision()
-    main_plot_file(['tmp2', 'tmp2_noiseonly_generated'], 'plottest', [True, True, True])
+    main_plot_file(['DEMO_multipass', 'DEMO_multipass', 'DEMO_multipass', 'DEMO_multipass'], 'plottest', [True, True, True])
 
 
 if __name__ == '__main__':

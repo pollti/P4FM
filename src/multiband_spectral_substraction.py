@@ -4,10 +4,14 @@ import numpy as np
 from numpy import fft
 
 
-# import statsmodels
-
-
-def SSMultibandKamath02(signal: np.ndaray, fs, IS: float = .25) -> np.ndarray:  # TODO: use noise detection replacing IS
+def SSMultibandKamath02(signal: np.ndarray, fs: int, IS: float = .25) -> np.ndarray:  # TODO: use noise detection replacing IS
+    """
+    Multi-band Spectral subtraction. Subtraction with adjusting subtraction factor. The adjustment is according to local a postriori SNR and the frequency band.
+    :param signal: noisy initial signal
+    :param fs: sampling frequency
+    :param IS: initial silence length. Will be replaced later (TODO)
+    :return: denoised signal. CAUTION: Maybe slightly shorter than input.
+    """
     W = int(.025 * fs)  # 25 ms sequences # TODO: replace by noise detection interval
     nfft = W
     SP = .4  # Shift percentage is 40% (10ms)
@@ -16,15 +20,11 @@ def SSMultibandKamath02(signal: np.ndaray, fs, IS: float = .25) -> np.ndarray:  
     NIS = int((IS * fs - W) / (SP * W) + 1)  # number of initial silence segments # TODO: replace everywhere NIS
     Gamma = 2  # Magnitude Power (1 for magnitude spectral subtraction 2 for power spectrum subtraction)
 
-    # TODO: unimplemented part: https://viewer.mathworks.com/?viewer=plain_code&url=https%3A%2F%2Fde.mathworks.com%2Fmatlabcentral%2Fmlc-downloads%2Fdownloads%2Fsubmissions%2F7674%2Fversions%2F1%2Fcontents%2FSSMultibandKamath02.m
-
-    unknown = []
-    unknown2 = 4
-    # y = statsmodels.tsa.ar_model.AutoReg(unknown, unknown2).fit()  # TODO fix
+    # y = statsmodels.tsa.ar_model.AutoReg(unknown, unknown2).fit()
     y = segment(signal, W, SP, wnd)
-    Y = np.fft.fft(y, nfft)
-    YPhase = np.angle(Y[0:(Y.size / 2).floor + 1, :])  # Noisy Speech Phase # TODO: off-by-1?
-    Y = np.power(np.abs(Y[0:(Y.size / 2).floor + 1, :]), Gamma)  # TODO: off-by-1?
+    Y = np.fft.fft(y.T, nfft).T  # .Ts after debug
+    YPhase = np.angle(Y[0:int((Y.shape[0] / 2)) + 1, :])  # Noisy Speech Phase
+    Y = np.power(np.abs(Y[0:int((Y.shape[0] / 2)) + 1, :]), Gamma)
     numberOfFrames = Y.shape[1]
     FreqResol = Y.shape[0]
 
@@ -44,30 +44,31 @@ def SSMultibandKamath02(signal: np.ndaray, fs, IS: float = .25) -> np.ndarray:  
 
     # Delta is a frequency dependent coefficient
     Delta = 1.5 * np.ones(BN.size)
-    Delta[0:((-2000 + fs / 2) * FreqResol * 2 / fs).floor] = 2.5;  # if the frequency is lower than FS/2 - 2KHz # TODO: ob1?
-    Delta[0:(1000 * FreqResol * 2 / fs).floor] = 1;  # if the frequency is lower than 1KHz # TODO: ob1?
+    Delta[0:int((-2000 + fs / 2) * FreqResol * 2 / fs)] = 2.5  # if the frequency is lower than FS/2 - 2KHz
+    Delta[0:int(1000 * FreqResol * 2 / fs)] = 1  # if the frequency is lower than 1KHz
+    X = np.zeros((FreqResol, numberOfFrames))
     for i in range(0, numberOfFrames):
         [NoiseFlag, SpeechFlag, NoiseCounter, Dist] = vad(np.power(Y[:, i], (1 / Gamma)), np.power(N, (1 / Gamma)), NoiseCounter)  # Magnitude Spectrum Distance VAD
         if SpeechFlag == 0:
             N = (NoiseLength * N + Y[:, i]) / (NoiseLength + 1)  # Update and smooth noise
             BN = Beta * N
 
-        SNR = 10 * np - np.log(Y[:, i]) / N
+        SNR = 10 * np.log(Y[:, i] / N)
         alpha = alphaSlope * SNR + alphaShift
-        alpha = np.max(np.min(alpha, maxalpha), minalpha)
+        alpha = np.maximum(np.minimum(alpha, maxalpha), minalpha)
 
         D = Y[:, i] - np.multiply(np.multiply(Delta, alpha), N)  # Nonlinear (Non-uniform) Power Spectrum Subtraction
 
-        X[:, i] = np.max(D, BN);  # if BY>D X=BY else X=D which sets very small values of subtraction result to an attenuated version of the input power spectrum.
+        X[:, i] = np.maximum(D, BN)  # if BY>D X=BY else X=D which sets very small values of subtraction result to an attenuated version of the input power spectrum.
 
-    output = OverlapAdd2(np.pow(X, (1 / Gamma)), YPhase, W, SP * W);
+    output = OverlapAdd2(np.power(X, (1 / Gamma)), YPhase, W, int(SP * W)).astype(np.int16)
 
     return output
 
 
 def OverlapAdd2(xnew: np.ndarray, yphase: np.ndarray = None, window_len: int = None, shift_len: int = None) -> np.ndarray:
     """
-
+    Reconstructs the signal.
     :param xnew: two dimensional array holding a fft of a signal segment per column
     :param yphase: phase angle of spectrum. Dimension is identical to xnew's. Defaulting to phase angle of xnew (for real values: zero)
     :param window_len: window length of time domain segments. Defaulting to twice fft window length
@@ -75,20 +76,19 @@ def OverlapAdd2(xnew: np.ndarray, yphase: np.ndarray = None, window_len: int = N
     :return: signal reconstructed from given spectrogram
     """
     if yphase is None:
-        yphase = xnew  # TODO
+        yphase = np.angle(xnew)
     if window_len is None:
-        window_len = 0  # TODO
+        window_len = xnew.shape[0] * 2
     if shift_len is None:
         shift_len = window_len / 2
 
     (freq_res, frame_num) = xnew.shape
-
     Spec = xnew * np.exp(1j * yphase)
 
-    if (window_len % 2) == 0:  # window length is odd. TODO: might need freq_res for window_length
-        Spec = np.append(Spec, np.flipud(np.conj(Spec[1:, :])))
+    if window_len % 2:  # window length is odd
+        Spec = np.r_[Spec, np.flipud(np.conj(Spec[1:, :]))]
     else:
-        Spec = np.append(Spec, np.flipud(np.conj(Spec[1:-1, :])))
+        Spec = np.r_[Spec, np.flipud(np.conj(Spec[1:-1, :]))]
 
     sig = np.zeros((frame_num - 1) * shift_len + window_len)
 
@@ -115,8 +115,8 @@ def vad(signal: np.ndarray, noise: np.ndarray, noise_counter: int = 0, noise_mar
     """
     # freq_resol = signal.size
     spectral_dist = 20 * (np.log10(signal) - np.log10(noise))
-    spectral_ist = np.clip(spectral_dist, 0)  # cut off negative values
-    dist = np.mean(spectral_dist)[0]
+    spectral_dist = np.clip(spectral_dist, 0, None)  # cut off negative values
+    dist = np.mean(spectral_dist).astype(float)
     if dist < noise_margin:
         noise_flag = 1
         noise_counter += 1
@@ -144,7 +144,7 @@ def segment(signal: np.ndarray, samples_per_window: int = 256, shift_percentage:
         window = np.hamming(samples_per_window)  # Hamming window als Fensterfunktion: https://de.wikipedia.org/wiki/Fensterfunktion
     signal_length = signal.size
     sp = int(samples_per_window * shift_percentage)
-    segment_number = int((signal_length - samples_per_window) / sp + 1)  # TODO: check +1
+    segment_number = int((signal_length - samples_per_window) / sp + 1)
     a = np.tile(np.arange(samples_per_window), (segment_number, 1))
     b = np.tile(np.arange(segment_number) * sp, (samples_per_window, 1)).T
     index = (a + b).T
