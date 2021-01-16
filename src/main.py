@@ -16,6 +16,7 @@ from matplotlib.contour import QuadContourSet
 from src.multiband_spectral_substraction import segment
 from src.plot_util import SubplotsAndSave
 from src.multiband_spectral_substraction import SSMultibandKamath02
+from fourier_plot import plot_fourier
 
 matplotlib_tuda.load()
 
@@ -81,7 +82,7 @@ def get_largest_noise_interval(intervals: np.ndarray) -> Tuple[int, int]:
     """
     largest_size = 0
     start = 0
-    end = 0
+    end = 0  # TODO: minimal noise interval must be specified here to avoid crashes!
     for a, b in intervals:
         if b - a > largest_size:
             start = a
@@ -188,7 +189,7 @@ def plot_spectrogram(signal: np.ndarray, rate: float, caption: str, ax, show_xla
     return c
 
 
-def main_plot_file(filenames, graphname: str, show_graph):
+def main_plot_file(filenames, graphname: str, show_graph):  # TODO: crashes with only one file as parameter
     """
     Generates required files (denoised, noise) and plots spectrograms.
     :param filenames: files to process as list. Files are rows.
@@ -279,6 +280,8 @@ def main_plot_place_comparision():  # TODO: crashes with only one file as parame
                 time_vec, signal, rate = read_audio(filename)
 
                 denoised_signal, noise_signal, intervals, a, b = denoise_audio(signal, rate)
+                scipy.io.wavfile.write(f'media/{filename}_denoised_generated.wav', rate, denoised_signal)
+                scipy.io.wavfile.write(f'media/{filename}_noiseonly_generated.wav', rate, noise_signal)
 
                 ax = axs[i, j]
                 c = plot_spectrogram(noise_signal, rate, name + ', Noise', ax, i == len(ids) - 1, j == 0, i == 0)
@@ -323,8 +326,22 @@ def main():
 
     for name in eingabeListe:
         print(name)
-    main_plot_place_comparision()
-    #main_plot_file(['DEMO_multipass'], 'plottest', [True, True, True])
+    # main_plot_place_comparision()
+    # main_plot_file(['DEMO_multipass'], 'plottest', [True, True, True])
+
+    places = ['Fabi', 'Platz', 'Street', 'Tim', 'Treppe', 'Wald']
+    for place in places:
+        _, signal1, rate = read_audio(f'live/{place}01')
+        _, signal2, _ = read_audio(f'live/{place}02')
+        _, signal3, _ = read_audio(f'live/{place}03')
+        _, signal4, _ = read_audio(f'live/{place}04')
+        _, signal5, _ = read_audio(f'live/{place}05')
+        _, signal1n, _, _, _ = denoise_audio(signal1, rate)
+        _, signal2n, _, _, _ = denoise_audio(signal2, rate)
+        _, signal3n, _, _, _ = denoise_audio(signal3, rate)
+        _, signal4n, _, _, _ = denoise_audio(signal4, rate)
+        _, signal5n, _, _, _ = denoise_audio(signal5, rate)
+        plot_fourier(rate, signal1n, signal2n, signal3n, signal4n, signal5n)
 
 
 if __name__ == '__main__':
