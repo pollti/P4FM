@@ -4,20 +4,27 @@ import numpy as np
 from numpy import fft
 
 
-def SSMultibandKamath02(signal: np.ndarray, fs: int, IS: float = .25) -> np.ndarray:  # TODO: use noise detection replacing IS
+def SSMultibandKamath02(signal: np.ndarray, fs: int, a: int = 0, b: int = 2560) -> np.ndarray:  # TODO: use noise detection replacing IS
     """
     Multi-band Spectral subtraction. Subtraction with adjusting subtraction factor. The adjustment is according to local a postriori SNR and the frequency band.
     :param signal: noisy initial signal
     :param fs: sampling frequency
-    :param IS: initial silence length. Will be replaced later (TODO)
+    :param a: first sample index of largest noise only segment
+    :param b: last sample index of largest noise only segment
     :return: denoised signal. CAUTION: Maybe slightly shorter than input.
     """
-    W = int(.025 * fs)  # 25 ms sequences # TODO: replace by noise detection interval
+    W = int(.025 * fs)  # 25 ms sequences
     nfft = W
     SP = .4  # Shift percentage is 40% (10ms)
     wnd = np.hamming(W)
 
-    NIS = int((IS * fs - W) / (SP * W) + 1)  # number of initial silence segments # TODO: replace everywhere NIS
+    first_silence_segment = int(a / (SP * W) + 1)
+    last_silence_segment = int((b - W) / (SP * W) + 1)
+    if last_silence_segment <= first_silence_segment:
+        print("Denoising error (multipass): to few noise found. Expecting first .25 seconds to be noise.")
+        first_silence_segment = 0
+        last_silence_segment = 10
+    # NIS = int((IS * fs - W) / (SP * W) + 1)  # number of initial silence segments # TODO: replace everywhere NIS
     Gamma = 2  # Magnitude Power (1 for magnitude spectral subtraction 2 for power spectrum subtraction)
 
     # y = statsmodels.tsa.ar_model.AutoReg(unknown, unknown2).fit()
@@ -28,7 +35,7 @@ def SSMultibandKamath02(signal: np.ndarray, fs: int, IS: float = .25) -> np.ndar
     numberOfFrames = Y.shape[1]
     FreqResol = Y.shape[0]
 
-    N = np.mean(Y[:, 0: NIS], 1).T  # initial Noise Power Spectrum mean
+    N = np.mean(Y[:, first_silence_segment:last_silence_segment], 1).T  # initial Noise Power Spectrum mean
 
     NoiseCounter = 0
     NoiseLength = 9  # This is a smoothing factor for the noise updating

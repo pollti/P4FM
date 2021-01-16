@@ -90,11 +90,12 @@ def get_largest_noise_interval(intervals: np.ndarray) -> Tuple[int, int]:
     return start, end
 
 
-def denoise_audio(signal: np.ndarray, rate: int) -> Tuple[np.ndarray, np.ndarray, int, int]:
+def denoise_audio(signal: np.ndarray, rate: int, including_multipass: bool = True) -> Tuple[np.ndarray, np.ndarray, np.ndarray, int, int]:
     """
     Denoises given audio signal.
     :param signal: audio signal as int16 values
     :param rate: audio sample rate in samples per second
+    :param including_multipass: also use Multi-band Spectral subtraction for advanced denoising. Caution: returned audio length may then be smaller.
     :returns: denoised audio signal as int16 values
     :returns: intervals of pure noise
     :returns: start of used noise interval
@@ -105,7 +106,11 @@ def denoise_audio(signal: np.ndarray, rate: int) -> Tuple[np.ndarray, np.ndarray
     noisy_part = signal[a:b]
     # perform noise reduction
     reduced_noise = nr.reduce_noise(audio_clip=signal.astype(np.float16), noise_clip=noisy_part.astype(np.float16), verbose=False).astype(np.int16)
-    return reduced_noise, intervals, a, b
+    noise_signal = signal - reduced_noise
+    if including_multipass:
+        voice_leakage = SSMultibandKamath02(noise_signal, rate, a, b)
+        noise_signal = noise_signal[:voice_leakage.size] - voice_leakage
+    return reduced_noise, noise_signal, intervals, a, b
 
 
 def read_audio(filename: str) -> Tuple[np.ndarray, np.ndarray, int]:
@@ -237,7 +242,7 @@ def main_plot_file(filenames, graphname: str, show_graph):
                 bar.update(i * plottypes + 1)
 
             if show_graph[0] or show_graph[1]:
-                denoised_signal, _, _, _ = denoise_audio(signal, rate)
+                denoised_signal, noise_signal, _, _, _ = denoise_audio(signal, rate)
 
             if show_graph[1]:
                 scipy.io.wavfile.write(f'media/{filename}_denoised_generated.wav', rate, denoised_signal)
@@ -246,16 +251,7 @@ def main_plot_file(filenames, graphname: str, show_graph):
                 bar.update(i * plottypes + show_graph[:1].count(True) + 1)
 
             if show_graph[2]:
-                noise_signal = signal[:denoised_signal.size] - denoised_signal
-                noise2 = SSMultibandKamath02(noise_signal, rate, 5)
-                if i == 1:
-                    noise_signal[:noise2.size] += noise2
-                if i == 2:
-                    noise_signal[:noise2.size] -= noise2
-                    scipy.io.wavfile.write(f'media/{filename}_noiseonly_generated.wav', rate, noise_signal)
-                if i == 3:
-                    noise_signal = noise2
-                # scipy.io.wavfile.write(f'media/{filename}_noiseonly_generated.wav', rate, noise_signal)
+                scipy.io.wavfile.write(f'media/{filename}_noiseonly_generated.wav', rate, noise_signal)
                 # plot_signal(time_vec, noise_signal, filename + '_noise')
                 c = plot_spectrogram(noise_signal, rate, 'noise', axs[i, + show_graph[:2].count(True)], i == plottypes - 1, not (show_graph[0] | show_graph[1]), i == 0)
                 bar.update(i * plottypes + show_graph[:2].count(True) + 1)
@@ -282,9 +278,8 @@ def main_plot_place_comparision():  # TODO: crashes with only one file as parame
                 filename = f'live/{name}{end}'
                 time_vec, signal, rate = read_audio(filename)
 
-                denoised_signal, intervals, a, b = denoise_audio(signal, rate)
+                denoised_signal, noise_signal, intervals, a, b = denoise_audio(signal, rate)
 
-                noise_signal = signal - denoised_signal
                 ax = axs[i, j]
                 c = plot_spectrogram(noise_signal, rate, name + ', Noise', ax, i == len(ids) - 1, j == 0, i == 0)
                 # Noise and speach lines at plot top.
@@ -329,7 +324,7 @@ def main():
     for name in eingabeListe:
         print(name)
     main_plot_place_comparision()
-    main_plot_file(['DEMO_multipass', 'DEMO_multipass', 'DEMO_multipass', 'DEMO_multipass'], 'plottest', [True, True, True])
+    #main_plot_file(['DEMO_multipass'], 'plottest', [True, True, True])
 
 
 if __name__ == '__main__':
