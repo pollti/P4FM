@@ -10,13 +10,13 @@ import matplotlib_tuda
 import noisereduce as nr
 import progressbar
 import webrtcvad
+import fourier_plot
 from matplotlib import pyplot as plt, ticker
 from matplotlib.contour import QuadContourSet
 
 from src.multiband_spectral_substraction import segment
 from src.plot_util import SubplotsAndSave
 from src.multiband_spectral_substraction import SSMultibandKamath02
-from fourier_plot import plot_fourier
 
 matplotlib_tuda.load()
 
@@ -329,19 +329,40 @@ def main():
     # main_plot_place_comparision()
     # main_plot_file(['DEMO_multipass'], 'plottest', [True, True, True])
 
+    _, signal1, rate = read_audio(f'noisewhite')
+    _, signal2, _ = read_audio(f'noisepink')
+    _, signal3, _ = read_audio(f'noisebrownian')
+    _, signal4, _ = read_audio(f'biiiiiiep')
+    # fourier_plot.plot_fourier(rate, signal1, signal2, signal3, signal4)
+
     places = ['Fabi', 'Platz', 'Street', 'Tim', 'Treppe', 'Wald']
+    # places = ['Platz', 'Street', 'Wald']
+    envs = []
+    d = {}
     for place in places:
         _, signal1, rate = read_audio(f'live/{place}01')
         _, signal2, _ = read_audio(f'live/{place}02')
         _, signal3, _ = read_audio(f'live/{place}03')
         _, signal4, _ = read_audio(f'live/{place}04')
         _, signal5, _ = read_audio(f'live/{place}05')
-        _, signal1n, _, _, _ = denoise_audio(signal1, rate)
-        _, signal2n, _, _, _ = denoise_audio(signal2, rate)
-        _, signal3n, _, _, _ = denoise_audio(signal3, rate)
-        _, signal4n, _, _, _ = denoise_audio(signal4, rate)
-        _, signal5n, _, _, _ = denoise_audio(signal5, rate)
-        plot_fourier(rate, signal1n, signal2n, signal3n, signal4n, signal5n)
+        # _, signal6, _ = read_audio(f'live/{place}06')
+        # _, signal7, _ = read_audio(f'live/{place}07')
+        _, signal1n, _, _, _ = denoise_audio(signal1, rate, False)
+        _, signal2n, _, _, _ = denoise_audio(signal2, rate, False)
+        _, signal3n, _, _, _ = denoise_audio(signal3, rate, False)
+        _, signal4n, _, _, _ = denoise_audio(signal4, rate, False)
+        _, signal5n, _, _, _ = denoise_audio(signal5, rate, False)
+        # _, signal6n, _, _, _ = denoise_audio(signal6, rate, False)
+        # _, signal7n, _, _, _ = denoise_audio(signal7, rate, False)
+        # plot_fourier(rate, signal1n, signal2n, signal3n, signal4n, signal5n, signal6n, signal7n)
+        # fourier_plot.plot_fourier(rate, signal1n, signal2n, signal3n, signal4n, signal5n)
+        envs.append(fourier_plot.environment_generator(signal1n, signal2n, signal3n, signal4n, signal5n))
+        d[place] = [signal1n, signal2n, signal3n, signal4n, signal5n]
+    np.set_printoptions(linewidth=2000)
+    for place in places:
+        print(f'Environment: {place}')
+        for signal in d[place]:
+            print(fourier_plot.environment_detector(rate, signal, *envs))
 
 
 if __name__ == '__main__':
