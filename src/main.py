@@ -34,7 +34,7 @@ def get_speech_postions(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, in
     sample_rates = np.asarray([8000, 16000, 32000, 48000])
     if not (samples_per_second in sample_rates):
         new_sps = sample_rates[(np.abs(sample_rates - samples_per_second)).argmin()]
-        print(f' WARNING: Unexpected rate in noise position detection: {samples_per_second}. Falling back to {new_sps}')
+        # print(f' WARNING: Unexpected rate in noise position detection: {samples_per_second}. Falling back to {new_sps}')
         samples_per_second = new_sps
     samples_per_frame = samples_per_second // 100
     frame_count = signal.size // samples_per_frame
@@ -359,10 +359,19 @@ def main():
         envs.append(fourier_plot.environment_generator(signal1n, signal2n, signal3n, signal4n, signal5n))
         d[place] = [signal1n, signal2n, signal3n, signal4n, signal5n]
     np.set_printoptions(linewidth=2000)
+    #for place in places:
+    #    print(f'Environment: {place}')
+    #    for signal in d[place]:
+    #        print(fourier_plot.environment_detector(rate, signal, *envs, size=1024))
+    places = ['nDecke', 'nRaum', 'nFenster']
     for place in places:
         print(f'Environment: {place}')
-        for signal in d[place]:
-            print(fourier_plot.environment_detector(rate, signal, *envs))
+        _, signal1, rate = read_audio(f'live/{place}01')
+        _, signal2, _ = read_audio(f'live/{place}02')
+        _, signal1n, _, _, _ = denoise_audio(signal1, rate, False)
+        _, signal2n, _, _, _ = denoise_audio(signal2, rate, False)
+        print(fourier_plot.environment_detector(rate, signal1n, *envs))
+        print(fourier_plot.environment_detector(rate, signal2n, *envs))
 
 
 if __name__ == '__main__':
