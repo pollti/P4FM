@@ -358,20 +358,21 @@ def main():
         # fourier_plot.plot_fourier(rate, signal1n, signal2n, signal3n, signal4n, signal5n)
         envs.append(fourier_plot.environment_generator(signal1n, signal2n, signal3n, signal4n, signal5n))
         d[place] = [signal1n, signal2n, signal3n, signal4n, signal5n]
-    # np.set_printoptions(linewidth=2000)
-    # for place in places:
+
+    np.set_printoptions(linewidth=2000)
+    #for place in places:
     #    print(f'Environment: {place}')
     #    for signal in d[place]:
     #        print(fourier_plot.environment_detector(rate, signal, *envs, size=1024))
-    # places = ['nDecke', 'nRaum', 'nFenster']
-    # for place in places:
-    #    print(f'Environment: {place}')
-    #    _, signal1, rate = read_audio(f'live/{place}01')
-    #    _, signal2, _ = read_audio(f'live/{place}02')
-    #    _, signal1n, _, _, _ = denoise_audio(signal1, rate, False)
-    #    _, signal2n, _, _, _ = denoise_audio(signal2, rate, False)
-    #    print(fourier_plot.environment_detector(rate, signal1n, *envs))
-    #    print(fourier_plot.environment_detector(rate, signal2n, *envs))
+    places = ['nDecke', 'nRaum', 'nFenster']
+    for place in places:
+        print(f'Environment: {place}')
+        _, signal1, rate = read_audio(f'live/{place}01')
+        _, signal2, _ = read_audio(f'live/{place}02')
+        _, signal1n, _, _, _ = denoise_audio(signal1, rate, False)
+        _, signal2n, _, _, _ = denoise_audio(signal2, rate, False)
+        print(fourier_plot.environment_detector(rate, signal1n, *envs))
+        print(fourier_plot.environment_detector(rate, signal2n, *envs))
 
     # Plot environments.
     frequencies = np.fft.rfftfreq(256, 1 / rate)
