@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from multiband_spectral_substraction import segment
 
 
-def environment_generator(*signals: np.ndarray, size: int = 256) -> np.ndarray:
+def environment_generator(signals, size: int = 256) -> np.ndarray:
     all_data = None
     frequencies = None
     for signal in signals:

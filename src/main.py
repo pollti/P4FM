@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Tuple
 
 import sys
@@ -19,28 +20,33 @@ from src.plot_util import SubplotsAndSave
 from src.multiband_spectral_substraction import SSMultibandKamath02
 
 from sacred import Experiment
-ex=Experiment()
+
+ex = Experiment()
 
 matplotlib_tuda.load()
+np.set_printoptions(linewidth=2000)
 
+
+# noinspection PyUnusedLocal
 @ex.config
 def ex_config():
-    de_signaled=False#set true to use pre designaled recordings AND recordings_to_be_assigned
-    environments_calculated=False #set true to use precalculated environments
+    de_signaled = False  # set true to use pre designaled recordings AND recordings_to_be_assigned
+    environments_calculated = False  # set true to use precalculated environments
 
-    path=""#The relative path to the recordings
-    recordings ={"Room1":["Fabi01","Fabi02","Fabi03","Fabi04","Fabi05"],
-                 "Room2":["Tim01","Tim02","Tim03","Tim04","Tim05"],
-                 "Platz":["Platz01","Platz02","Platz03","Platz04","Platz05"],
-                 "Street":["Street01","Street02","Street03","Street04","Street05"],
-                 "Treppe":["Treppe01","Treppe02","Treppe03","Treppe04","Treppe05"],
-                 "Wald":["Wald01","Wald02","Wald03","Wald04","Wald05"]} #filenames assigned to location
-    recordings_to_be_assigned=deepcopy(recordings) #deepcopy notwendig um nicht nur die Referenz zu kopieren, for this default case we want to assign the already assigned data to see how acurate it works
-    recordings_to_be_assigned["unknown"]=["Fabi01"]
+    path = "Audio/"  # The relative path to the recordings depends on working directory
+    ending = ".wav"
+    recordings = {"Room1": ["Fabi01", "Fabi02", "Fabi03", "Fabi04", "Fabi05"],
+                  "Room2": ["Tim01", "Tim02", "Tim03", "Tim04", "Tim05"],
+                  "Platz": ["Platz01", "Platz02", "Platz03", "Platz04", "Platz05"],
+                  "Street": ["Street01", "Street02", "Street03", "Street04", "Street05"],
+                  "Treppe": ["Treppe01", "Treppe02", "Treppe03", "Treppe04", "Treppe05"],
+                  "Wald": ["Wald01", "Wald02", "Wald03", "Wald04", "Wald05"]}  # filenames assigned to location
+    recordings_to_be_assigned = deepcopy(
+        recordings)  # deepcopy notwendig um nicht nur die Referenz zu kopieren, for this default case we want to assign the already assigned data to see how acurate it works
+    recordings_to_be_assigned["unknown"] = ["Fabi01"]  # put one file for test purpose
     environments = None
-    recordings_noise_only=None
-    recordings_to_be_assigned_noise_only=None
-
+    recordings_noise_only = None
+    recordings_to_be_assigned_noise_only = None
 
 
 def get_speech_postions(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, int]:
@@ -136,16 +142,16 @@ def denoise_audio(signal: np.ndarray, rate: int, including_multipass: bool = Tru
     return reduced_noise, noise_signal, intervals, a, b
 
 
-def read_audio(filename: str) -> Tuple[np.ndarray, np.ndarray, int]:
+def read_audio(path: str) -> Tuple[np.ndarray, np.ndarray, int]:
     """
     :TODO: make it work with different stereo signals
     Reads Wave-Files 
-    :param filename: path to file from media folder, without the .wav ending
+    :param path: path to file from media folder, without the .wav ending
     :returns: shape:(T,) all the sampled times as floats
     :returns: shape:(S,) the samples of the left stereoline as int16 values
     :returns: samplerate as float
     """
-    rate, data = scipy.io.wavfile.read(f'media/{filename}.wav')
+    rate, data = scipy.io.wavfile.read(f'{path}.wav')
     time_step = 1 / rate
     time_vec = np.arange(0, data.shape[0]) * time_step
     if len(data.shape) == 2:
@@ -334,72 +340,46 @@ def main_plot_place_comparision():  # TODO: crashes with only one file as parame
         fig.show()
 
 
-def main():
-    time_vec, signal, rate = read_audio('tmp')
-    segment(signal[:44100], 256)
+@ex.automain
+def main(recordings, recordings_to_be_assigned, path, ending, de_signaled, environments_calculated, environments, recordings_noise_only, recordings_to_be_assigned_noise_only):
+    #time_vec, signal, rate = read_audio('tmp')
+    #segment(signal[:44100], 256)
+    envs = {}  # Mapping from place to calculated environment
+    if not de_signaled:
+        recordings_noise_only={}
+        recordings_to_be_assigned_noise_only={}
+        for place, recs in recordings.items():
+            signals = []
+            designaled_signals = []
+            for rec in recs:
+                _, signal, rate = read_audio(path + rec)
+                signals.append(signal)
+                _, designaled_signal, _, _, _ = denoise_audio(signal, rate, False)
+                designaled_signals.append(designaled_signal)
 
-    if len(sys.argv) < 2:
-        eingabe = input('Please give a filename or nothing to terminate: Press enter to finish.')
-        eingabeListe = eingabe.split(" ")
-        if not eingabeListe:  # ergibt True falls Liste keine Einträge hat
-            quit(1)  # TODO: Returncodes & fix list with empty string
-    else:
-        eingabeListe = sys.argv[1:]
+            envs[place] = fourier_plot.environment_generator(designaled_signals)
+            recordings_noise_only[place] = designaled_signals
 
-    for name in eingabeListe:
-        print(name)
-    # main_plot_place_comparision()
-    # main_plot_file(['DEMO_multipass'], 'plottest', [True, True, True])
+        for place, recs in recordings_to_be_assigned.items():
+            signals = []
+            designaled_signals = []
+            for rec in recs:
+                _, signal, rate = read_audio(path + rec)
+                signals.append(signal)
+                _, designaled_signal, _, _, _ = denoise_audio(signal, rate, False)
+                designaled_signals.append(designaled_signal)
 
-    _, signal1, rate = read_audio(f'noisewhite')
-    _, signal2, _ = read_audio(f'noisepink')
-    _, signal3, _ = read_audio(f'noisebrownian')
-    _, signal4, _ = read_audio(f'biiiiiiep')
-    # fourier_plot.plot_fourier(rate, signal1, signal2, signal3, signal4)
+            recordings_to_be_assigned_noise_only[place] = designaled_signals
 
-    places = ['Fabi', 'Platz', 'Street', 'Tim', 'Treppe', 'Wald']
-    # places = ['Platz', 'Street', 'Wald']
-    envs = []
-    d = {}
-    for place in places:
-        _, signal1, rate = read_audio(f'live/{place}01')
-        _, signal2, _ = read_audio(f'live/{place}02')
-        _, signal3, _ = read_audio(f'live/{place}03')
-        _, signal4, _ = read_audio(f'live/{place}04')
-        _, signal5, _ = read_audio(f'live/{place}05')
-        # _, signal6, _ = read_audio(f'live/{place}06')
-        # _, signal7, _ = read_audio(f'live/{place}07')
-        _, signal1n, _, _, _ = denoise_audio(signal1, rate, False)
-        _, signal2n, _, _, _ = denoise_audio(signal2, rate, False)
-        _, signal3n, _, _, _ = denoise_audio(signal3, rate, False)
-        _, signal4n, _, _, _ = denoise_audio(signal4, rate, False)
-        _, signal5n, _, _, _ = denoise_audio(signal5, rate, False)
-        # _, signal6n, _, _, _ = denoise_audio(signal6, rate, False)
-        # _, signal7n, _, _, _ = denoise_audio(signal7, rate, False)
-        # plot_fourier(rate, signal1n, signal2n, signal3n, signal4n, signal5n, signal6n, signal7n)
-        # fourier_plot.plot_fourier(rate, signal1n, signal2n, signal3n, signal4n, signal5n)
-        envs.append(fourier_plot.environment_generator(signal1n, signal2n, signal3n, signal4n, signal5n))
-        d[place] = [signal1n, signal2n, signal3n, signal4n, signal5n]
-
-    np.set_printoptions(linewidth=2000)
-    #for place in places:
-    #    print(f'Environment: {place}')
-    #    for signal in d[place]:
-    #        print(fourier_plot.environment_detector(rate, signal, *envs, size=1024))
-    places = ['nDecke', 'nRaum', 'nFenster']
-    for place in places:
+    for place, denoised_signals in recordings_to_be_assigned_noise_only.items():
         print(f'Environment: {place}')
-        _, signal1, rate = read_audio(f'live/{place}01')
-        _, signal2, _ = read_audio(f'live/{place}02')
-        _, signal1n, _, _, _ = denoise_audio(signal1, rate, False)
-        _, signal2n, _, _, _ = denoise_audio(signal2, rate, False)
-        print(fourier_plot.environment_detector(rate, signal1n, *envs))
-        print(fourier_plot.environment_detector(rate, signal2n, *envs))
+        for denoised_signal in denoised_signals:
+            print(fourier_plot.environment_detector(rate, denoised_signal, *envs.values()))
 
     # Plot environments.
     frequencies = np.fft.rfftfreq(256, 1 / rate)
-    for i, env in enumerate(envs):
-        plt.scatter(frequencies, env, s=1, label=places[i])
+    for place, env in envs.items():
+        plt.scatter(frequencies, env, s=1, label=place)
     # for row in all_data.T:
     #    plt.scatter(frequencies, row, s=1)
     plt.xscale('log')
@@ -410,7 +390,3 @@ def main():
     plt.ylabel("energy")
     plt.title("Environment data")
     plt.show()
-
-
-if __name__ == '__main__':
-    main()
