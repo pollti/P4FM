@@ -18,7 +18,29 @@ from src.multiband_spectral_substraction import segment
 from src.plot_util import SubplotsAndSave
 from src.multiband_spectral_substraction import SSMultibandKamath02
 
+from sacred import Experiment
+ex=Experiment()
+
 matplotlib_tuda.load()
+
+@ex.config
+def ex_config():
+    de_signaled=False#set true to use pre designaled recordings AND recordings_to_be_assigned
+    environments_calculated=False #set true to use precalculated environments
+
+    path=""#The relative path to the recordings
+    recordings ={"Room1":["Fabi01","Fabi02","Fabi03","Fabi04","Fabi05"],
+                 "Room2":["Tim01","Tim02","Tim03","Tim04","Tim05"],
+                 "Platz":["Platz01","Platz02","Platz03","Platz04","Platz05"],
+                 "Street":["Street01","Street02","Street03","Street04","Street05"],
+                 "Treppe":["Treppe01","Treppe02","Treppe03","Treppe04","Treppe05"],
+                 "Wald":["Wald01","Wald02","Wald03","Wald04","Wald05"]} #filenames assigned to location
+    recordings_to_be_assigned=deepcopy(recordings) #deepcopy notwendig um nicht nur die Referenz zu kopieren, for this default case we want to assign the already assigned data to see how acurate it works
+    recordings_to_be_assigned["unknown"]=["Fabi01"]
+    environments = None
+    recordings_noise_only=None
+    recordings_to_be_assigned_noise_only=None
+
 
 
 def get_speech_postions(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, int]:
