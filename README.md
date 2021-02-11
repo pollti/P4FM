@@ -9,7 +9,7 @@ Setup:
 * Activate the virtualenv with `source $name/bin/activate`
 * Install all requirements with `pip install -r requierements.txt`
 
-Save reuirements with `pip freeze > requirements.txt`
+Save requirements with `pip freeze > requirements.txt`
 
 ## Execution
 
