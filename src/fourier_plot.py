@@ -5,6 +5,12 @@ from multiband_spectral_substraction import segment
 
 
 def environment_generator(signals, size: int = 256) -> np.ndarray:
+    """
+    Generates a noise expectation for an environment based on many recordings.
+    :param signals: The signals of the recordings from the given environment. Should be noise only already by here and not be too short/few.
+    :param size: The window size for a single rfft. Choose higher values for more detailed frequency comparision. Must be identical to environment detection size later.
+    :return: frequency-energy expectation for this environment.
+    """
     all_data = None
     frequencies = None
     for signal in signals:
@@ -16,6 +22,15 @@ def environment_generator(signals, size: int = 256) -> np.ndarray:
 
 
 def environment_detector(rate: int, signal: np.ndarray, *envs: np.ndarray, size: int = 256) -> np.ndarray:
+    # TODO pass error_mean on from not yet existing parameters of this function.
+    """
+    Detects environment plausibility for a given recorded signal and several environments. Result dimension is highly dependent on squared error paramters.
+    :param rate: Sample rate of all signals.
+    :param signal: The signal of the recording under testing. Should be noise only already by here and not be too short.
+    :param envs: Expected frequency-energy levels per environment. Same window size as [size] and sample rate as [rate] must have been used to generate these.
+    :param size: The window size for a single rfft. Choose higher values for more detailed frequency comparision.
+    :return: Difference values per environment in the order of environments provided as parameters. Result dimension is highly dependent on squared error paramters.
+    """
     signal = segment(signal, size, 0.4, sp.signal.gaussian(size, size * 0.4))
     data = np.abs(np.fft.rfft(signal, axis=0))
     windows = data.shape[1]
@@ -23,7 +38,7 @@ def environment_detector(rate: int, signal: np.ndarray, *envs: np.ndarray, size:
     for env in envs:
         errors = None
         for row in data.T:
-            # any metric can be used here, scalar or ndarray. In case of ndarray: Caution with median later!!! Performance my be poor with arrays.
+            # any metric can be used here, scalar or ndarray. In case of ndarray: Caution with median later! Performance may be poor with arrays.
             tmp = error_mean(row, env, True, False, False, False, rate, size)
             errors = tmp if errors is None else np.hstack((errors, tmp))
         env_value = np.array([np.median(errors)])
@@ -32,6 +47,18 @@ def environment_detector(rate: int, signal: np.ndarray, *envs: np.ndarray, size:
 
 
 def error_mean(a: np.ndarray, b: np.ndarray, squared: bool, y_log: bool, x_log: bool, dga: bool, rate: int, size: int):
+    """
+    A flexible function for computing different kinds of mean errors of two arrays. Intentionally used for frequency-energy-levels.
+    :param a: First array (intentionally an environment).
+    :param b: Second array (intentionally an unassociated environment).
+    :param squared: Use Mean Square Error MSE instead of absolute differences. Weights higher differences more.
+    :param y_log: Applies mean error to logarithmated energy values, so punctual divergencies have less influence.
+    :param x_log: Weights low x frequencies higher resulting in an (about) equal weighting of all octaves in spectrum.
+    :param dga: Double Gaussion Approach DGA weights frequencies in common voice spectrum lower. Use with caution as manipulations in voice spectrum might not be detected and results may be less good anyway.
+    :param rate: Sample rate of all signals.
+    :param size: The window size for a single rfft. FFT is not applied here, but results in different length arrays. Could be replaced by analyzing a or b.
+    :return:
+    """
     if x_log and dga:
         print("Parameters incompatible: x_log and dga. Unexpected effects may occur.")
     if y_log:
@@ -51,12 +78,25 @@ def error_mean(a: np.ndarray, b: np.ndarray, squared: bool, y_log: bool, x_log: 
 
 
 def error(a: np.ndarray, b: np.ndarray, squared: bool):
+    """
+    Computes the absolute difference of two arrays of same dimension.
+    :param a: First array (intentionally an environment).
+    :param b: Second array (intentionally an unassociated environment).
+    :param squared: square difference values.
+    :return: array of differences with same dimensions as input arrays. Contains positive values only.
+    """
     if a.shape != b.shape:
         print("Squared error: different dimensions – Crashing.")
     return np.square(a - b) if squared else np.abs(a - b)
 
 
 def plot_fourier(rate: int, *signals: np.ndarray, size: int = 256):
+    """
+    Plots a frequency-energy diagram for the provided signals. Energy levels are meaned, one color is used per given signal. May also be used to se environments. Plots are not saved to disk.
+    :param rate: Sample rate of all signals.
+    :param signals: The signals to plot as numpy arrays. Must have at least [size] samples each, but should be way longer.
+    :param size: The window size for a single rfft.
+    """
     all_data = None
     frequencies = np.fft.rfftfreq(size, 1 / rate)
     for signal in signals:
@@ -79,35 +119,5 @@ def plot_fourier(rate: int, *signals: np.ndarray, size: int = 256):
     plt.yscale('log')
     plt.xlim((rate / size, rate / 2 + 1))
     plt.ylim((10 ** 1, 10 ** 5))
-    # plt.ylim(ymin=0)
-    plt.show()
-
-
-def plot_fourier_mean(rate: int, *signals: np.ndarray):
-    for signal in signals:
-        data = np.fft.fft(signal)
-        data = data ** 2
-        for i in range(0, data.size - 10):
-            data[i] = np.mean(data[i:i + 100])  # np.mean(data[i - 1:i])
-        frequencies = np.fft.fftfreq(data.size, 1 / rate)
-        plt.scatter(frequencies, data, s=1)
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.xlim((10, rate / 2 + 1))
-    plt.ylim((10 ** 0, 10 ** 16))
-    # plt.ylim(ymin=0)
-    plt.show()
-
-
-def plot_fourier_pure(rate: int, *signals: np.ndarray):
-    for signal in signals:
-        data = np.fft.fft(signal)
-        data = data ** 2
-        frequencies = np.fft.fftfreq(data.size, 1 / rate)
-        plt.scatter(frequencies, data, s=1)
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.xlim((10, rate / 2 + 1))
-    plt.ylim((10 ** 0, 10 ** 16))
     # plt.ylim(ymin=0)
     plt.show()
