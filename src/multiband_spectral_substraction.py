@@ -4,76 +4,82 @@ import numpy as np
 from numpy import fft
 
 
-def SSMultibandKamath02(signal: np.ndarray, fs: int, a: int = 0, b: int = 2560) -> np.ndarray:  # TODO: use noise detection replacing IS
+# Created with the help of the following Matlab implementation:
+#  Esfandiar Zavarehei (2021). Multi-band Spectral Subtraction (https://www.mathworks.com/matlabcentral/fileexchange/7674-multi-band-spectral-subtraction), MATLAB Central File Exchange. Retrieved February 19, 2021.
+
+# Related paper for technical details: Kamath, Sunil, and Philipos Loizou. "A multi-band spectral subtraction method for enhancing speech corrupted by colored noise." ICASSP. Vol. 4. 2002.
+
+def multiband_substraction_denoise(signal: np.ndarray, fs: int, a: int = 0, b: int = 2560) -> np.ndarray:
     """
     Multi-band Spectral subtraction. Subtraction with adjusting subtraction factor. The adjustment is according to local a postriori SNR and the frequency band.
     :param signal: noisy initial signal
-    :param fs: sampling frequency
+    :param fs: sampling frequency (samples per second)
     :param a: first sample index of largest noise only segment
     :param b: last sample index of largest noise only segment
     :return: denoised signal. CAUTION: Maybe slightly shorter than input.
     """
-    W = int(.025 * fs)  # 25 ms sequences
-    nfft = W
-    SP = .4  # Shift percentage is 40% (10ms)
-    wnd = np.hamming(W)
+    segment_size = int(.025 * fs)  # 25 ms sequences
+    nfft = segment_size
+    shift = .4  # Segment shift percentage is 40% (10ms)
+    wnd = np.hamming(segment_size)
 
-    first_silence_segment = int(a / (SP * W) + 1)
-    last_silence_segment = int((b - W) / (SP * W) + 1)
+    first_silence_segment = int(a / (shift * segment_size) + 1)
+    last_silence_segment = int((b - segment_size) / (shift * segment_size) + 1)
     if last_silence_segment <= first_silence_segment:
-        print("Denoising error (multipass): to few noise found. Expecting first .25 seconds to be noise.")
+        print("Denoising error (multipass): to few noise found. Assuming first .25 seconds to be noise.")
         first_silence_segment = 0
         last_silence_segment = 10
-    # NIS = int((IS * fs - W) / (SP * W) + 1)  # number of initial silence segments # TODO: replace everywhere NIS
-    Gamma = 2  # Magnitude Power (1 for magnitude spectral subtraction 2 for power spectrum subtraction)
+    # NIS = int((init_silence * fs - segment_size) / (shift * segment_size) + 1)  # number of initial silence segments; replaced by detected noise interval
+    gamma = 2  # Magnitude Power (1 for magnitude spectral subtraction 2 for power spectrum subtraction)
 
     # y = statsmodels.tsa.ar_model.AutoReg(unknown, unknown2).fit()
-    y = segment(signal, W, SP, wnd)
-    Y = np.fft.fft(y.T, nfft).T  # .Ts after debug
-    YPhase = np.angle(Y[0:int((Y.shape[0] / 2)) + 1, :])  # Noisy Speech Phase
-    Y = np.power(np.abs(Y[0:int((Y.shape[0] / 2)) + 1, :]), Gamma)
-    numberOfFrames = Y.shape[1]
-    FreqResol = Y.shape[0]
+    y = segment(signal, segment_size, shift, wnd)
+    y_fft = np.fft.fft(y.T, nfft).T  # .Ts after debug
+    y_phase = np.angle(y_fft[0:int((y_fft.shape[0] / 2)) + 1, :])  # Noisy Speech Phase
+    y_fft = np.power(np.abs(y_fft[0:int((y_fft.shape[0] / 2)) + 1, :]), gamma)
+    numberOfFrames = y_fft.shape[1]
+    FreqResol = y_fft.shape[0]
 
-    N = np.mean(Y[:, first_silence_segment:last_silence_segment], 1).T  # initial Noise Power Spectrum mean
+    N = np.mean(y_fft[:, first_silence_segment:last_silence_segment], 1).T  # initial Noise Power Spectrum mean
 
-    NoiseCounter = 0
-    NoiseLength = 9  # This is a smoothing factor for the noise updating
+    noise_counter = 0  # consecutive noises
+    noise_length = 9  # This is a smoothing factor for the noise updating
 
-    Beta = .03
+    # See paper for detailed explainations.
+    beta = .03
     minalpha = 1
     maxalpha = 5
     minSNR = -5
     maxSNR = 20
     alphaSlope = (minalpha - maxalpha) / (maxSNR - minSNR)
     alphaShift = maxalpha - alphaSlope * minSNR
-    BN = Beta * N
+    BN = beta * N
 
-    # Delta is a frequency dependent coefficient
-    Delta = 1.5 * np.ones(BN.size)
-    Delta[0:int((-2000 + fs / 2) * FreqResol * 2 / fs)] = 2.5  # if the frequency is lower than FS/2 - 2KHz
-    Delta[0:int(1000 * FreqResol * 2 / fs)] = 1  # if the frequency is lower than 1KHz
+    # Delta is a frequency dependent coefficient that can be adjusted here.
+    delta = 1.5 * np.ones(BN.size)
+    delta[0:int((-2000 + fs / 2) * FreqResol * 2 / fs)] = 2.5  # if the frequency is lower than FS/2 - 2KHz
+    delta[0:int(1000 * FreqResol * 2 / fs)] = 1  # if the frequency is lower than 1KHz
     X = np.zeros((FreqResol, numberOfFrames))
     for i in range(0, numberOfFrames):
-        [NoiseFlag, SpeechFlag, NoiseCounter, Dist] = vad(np.power(Y[:, i], (1 / Gamma)), np.power(N, (1 / Gamma)), NoiseCounter)  # Magnitude Spectrum Distance VAD
-        if SpeechFlag == 0:
-            N = (NoiseLength * N + Y[:, i]) / (NoiseLength + 1)  # Update and smooth noise
-            BN = Beta * N
+        [noise_flag, speech_flag, noise_counter, dist] = vad(np.power(y_fft[:, i], (1 / gamma)), np.power(N, (1 / gamma)), noise_counter)  # Magnitude Spectrum Distance VAD
+        if speech_flag == 0:
+            N = (noise_length * N + y_fft[:, i]) / (noise_length + 1)  # Update and smooth noise
+            BN = beta * N
 
-        SNR = 10 * np.log(Y[:, i] / N)
+        SNR = 10 * np.log(y_fft[:, i] / N)
         alpha = alphaSlope * SNR + alphaShift
         alpha = np.maximum(np.minimum(alpha, maxalpha), minalpha)
 
-        D = Y[:, i] - np.multiply(np.multiply(Delta, alpha), N)  # Nonlinear (Non-uniform) Power Spectrum Subtraction
+        D = y_fft[:, i] - np.multiply(np.multiply(delta, alpha), N)  # Nonlinear (Non-uniform) Power Spectrum Subtraction
 
         X[:, i] = np.maximum(D, BN)  # if BY>D X=BY else X=D which sets very small values of subtraction result to an attenuated version of the input power spectrum.
 
-    output = OverlapAdd2(np.power(X, (1 / Gamma)), YPhase, W, int(SP * W)).astype(np.int16)
+    output = signal_reconstruction(np.power(X, (1 / gamma)), y_phase, segment_size, int(shift * segment_size)).astype(np.int16)
 
     return output
 
 
-def OverlapAdd2(xnew: np.ndarray, yphase: np.ndarray = None, window_len: int = None, shift_len: int = None) -> np.ndarray:
+def signal_reconstruction(xnew: np.ndarray, yphase: np.ndarray = None, window_len: int = None, shift_len: int = None) -> np.ndarray:
     """
     Reconstructs the signal.
     :param xnew: two dimensional array holding a fft of a signal segment per column
@@ -90,20 +96,21 @@ def OverlapAdd2(xnew: np.ndarray, yphase: np.ndarray = None, window_len: int = N
         shift_len = window_len / 2
 
     (freq_res, frame_num) = xnew.shape
-    Spec = xnew * np.exp(1j * yphase)
+    spec = xnew * np.exp(1j * yphase)
 
     if window_len % 2:  # window length is odd
-        Spec = np.r_[Spec, np.flipud(np.conj(Spec[1:, :]))]
-    else:
-        Spec = np.r_[Spec, np.flipud(np.conj(Spec[1:-1, :]))]
+        spec = np.r_[spec, np.flipud(np.conj(spec[1:, :]))]
+    else:  # even window length
+        spec = np.r_[spec, np.flipud(np.conj(spec[1:-1, :]))]
 
     sig = np.zeros((frame_num - 1) * shift_len + window_len)
 
     for i in np.arange(frame_num):
         start = i * shift_len
-        spec = Spec[:, i]
-        sig[start:start + window_len] += np.real(np.fft.ifft(spec, window_len))
+        spec_i = spec[:, i]
+        sig[start:start + window_len] += np.real(np.fft.ifft(spec_i, window_len))
 
+    # returning a signal from frequencies
     return sig
 
 
@@ -149,12 +156,15 @@ def segment(signal: np.ndarray, samples_per_window: int = 256, shift_percentage:
     """
     if window is None:
         window = np.hamming(samples_per_window)  # Hamming window als Fensterfunktion: https://de.wikipedia.org/wiki/Fensterfunktion
+
+    # simple maxtrix operations for reordering
     signal_length = signal.size
     sp = int(samples_per_window * shift_percentage)
     segment_number = int((signal_length - samples_per_window) / sp + 1)
     a = np.tile(np.arange(samples_per_window), (segment_number, 1))
     b = np.tile(np.arange(segment_number) * sp, (samples_per_window, 1)).T
     index = (a + b).T
+    # hamming window application
     hw = np.tile(window, (segment_number, 1)).T
 
     return signal[index] * hw
