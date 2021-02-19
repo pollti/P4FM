@@ -47,11 +47,14 @@ def ex_config():
     environments = None
     recordings_noise_only = None
     recordings_to_be_assigned_noise_only = None
+    activate_multipass = False
     # graphs
     image_folder = "res"
     show_graphs_denoising = [True, True, True]
     filename_graph_denoising = "file_denoising_steps"
-    denoising_graph_multipass = True
+    denoising_graph_multipass = activate_multipass
+    filename_graph_comparing = "compare_denoised_files"
+    comparing_graph_multipass = activate_multipass
 
 
 def get_speech_postions(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, int]:
@@ -148,15 +151,17 @@ def denoise_audio(signal: np.ndarray, rate: int, including_multipass: bool = Tru
     return reduced_noise, noise_signal, intervals, a, b
 
 
-def read_audio(path: str) -> Tuple[np.ndarray, np.ndarray, int]:
+@ex.capture
+def read_audio(path__and_name: str, ending: str) -> Tuple[np.ndarray, np.ndarray, int]:
     """
     Reads Wave-Files.
     :param path: path to file from media folder, without the .wav ending
+    :param ending: file format ending like ".wav"
     :returns: shape:(T,) all the sampled times as floats
     :returns: shape:(S,) the samples of the left stereoline as int16 values
     :returns: samplerate as float
     """
-    rate, data = scipy.io.wavfile.read(f'{path}.wav')
+    rate, data = scipy.io.wavfile.read(f'{path__and_name}{ending}')
     time_step = 1 / rate
     time_vec = np.arange(0, data.shape[0]) * time_step
     if len(data.shape) == 2:
@@ -311,10 +316,18 @@ def main_plot_file(filenames, filename_graph_denoising: str, show_graphs_denoisi
         fig.show()
 
 
-def main_plot_place_comparision():  # TODO: crashes with only one file as parameter
+@ex.capture
+def main_plot_place_comparision(recordings, filename_graph_comparing: str, comparing_graph_multipass: bool, path: str,
+                                image_folder: str):  # TODO: crashes with only one file as parameter
     """
+    :param recordings: A mapping of locations to filenames to be plotted.
+    :param filename_graph_comparing: name of the saved plot file
+    :param comparing_graph_multipass: Apply multipass approach for better denoising.
+    :param path: path to audio files.
+    :param image_folder: path to image files (for output).
     Plots a comparision of denoised spectrums for environments with same number of files for each.
     """
+
     print('Generating plots for places. This may take a while.')
 
     c = None
@@ -322,16 +335,16 @@ def main_plot_place_comparision():  # TODO: crashes with only one file as parame
     places = ['Fabi', 'Platz', 'Street', 'Tim', 'Treppe', 'Wald']
     # Recording ids
     ids = ['01', '02', '03', '04', '05']
-    with SubplotsAndSave('res', 'noiseenvs', nrows=len(ids), ncols=len(places) + 1, sharey='all', file_types=['png']) as (fig, axs):
+    with SubplotsAndSave(image_folder, filename_graph_comparing, nrows=len(ids), ncols=len(places) + 1, sharey='all', file_types=['png']) as (fig, axs):
         bar = progressbar.ProgressBar(widgets=['Creating plot: ', progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()], maxval=len(places) * len(ids)).start()
         for i, end in enumerate(ids):
             for j, name in enumerate(places):
-                filename = f'live/{name}{end}'
+                filename = f'{path}{name}{end}'
                 time_vec, signal, rate = read_audio(filename)
 
-                denoised_signal, noise_signal, intervals, a, b = denoise_audio(signal, rate)
-                scipy.io.wavfile.write(f'media/{filename}_denoised_generated.wav', rate, denoised_signal)
-                scipy.io.wavfile.write(f'media/{filename}_noiseonly_generated.wav', rate, noise_signal)
+                denoised_signal, noise_signal, intervals, a, b = denoise_audio(signal, rate, comparing_graph_multipass)
+                scipy.io.wavfile.write(f'{path}{filename}_denoised_generated.wav', rate, denoised_signal)
+                scipy.io.wavfile.write(f'{path}{filename}_noiseonly_generated.wav', rate, noise_signal)
 
                 ax = axs[i, j]
                 c = plot_spectrogram(noise_signal, rate, name + ', Noise', ax, i == len(ids) - 1, j == 0, i == 0)
@@ -361,7 +374,8 @@ def main_plot_place_comparision():  # TODO: crashes with only one file as parame
 
 
 @ex.automain
-def main(recordings, recordings_to_be_assigned, path, ending, de_signaled, environments_calculated, environments, recordings_noise_only, recordings_to_be_assigned_noise_only):
+def main(recordings, recordings_to_be_assigned, path: str, ending: str, de_signaled: bool, environments_calculated, environments, recordings_noise_only,
+         recordings_to_be_assigned_noise_only, activate_multipass: bool):  # TODO documentation
     # time_vec, signal, rate = read_audio('tmp')
     # segment(signal[:44100], 256)
     envs = {}  # Mapping from place to calculated environment
@@ -374,7 +388,7 @@ def main(recordings, recordings_to_be_assigned, path, ending, de_signaled, envir
             for rec in recs:
                 _, signal, rate = read_audio(path + rec)
                 signals.append(signal)
-                _, designaled_signal, _, _, _ = denoise_audio(signal, rate, False)
+                _, designaled_signal, _, _, _ = denoise_audio(signal, rate, activate_multipass)
                 designaled_signals.append(designaled_signal)
 
             envs[place] = fourier_plot.environment_generator(designaled_signals)
@@ -389,7 +403,7 @@ def main(recordings, recordings_to_be_assigned, path, ending, de_signaled, envir
             for rec in recs:
                 _, signal, rate = read_audio(path + rec)
                 signals.append(signal)
-                _, designaled_signal, _, _, _ = denoise_audio(signal, rate, False)
+                _, designaled_signal, _, _, _ = denoise_audio(signal, rate, activate_multipass)
                 designaled_signals.append(designaled_signal)
 
             recordings_to_be_assigned_noise_only[place] = designaled_signals
