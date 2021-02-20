@@ -1,0 +1,194 @@
+%% This is file `DEMO-TUDaPub.tex' version 2.07 (2020/01/31),
+%% it is part of
+%% TUDa-CI -- Corporate Design for TU Darmstadt
+%% ----------------------------------------------------------------------------
+%%
+%%  Copyright (C) 2018--2019 by Marei Peischl <marei@peitex.de>
+%%
+%% ============================================================================
+%% This work may be distributed and/or modified under the
+%% conditions of the LaTeX Project Public License, either version 1.3c
+%% of this license or (at your option) any later version.
+%% The latest version of this license is in
+%% http://www.latex-project.org/lppl.txt
+%% and version 1.3c or later is part of all distributions of LaTeX
+%% version 2008/05/04 or later.
+%%
+%% This work has the LPPL maintenance status `maintained'.
+%%
+%% The Current Maintainers of this work are
+%%   Marei Peischl <tuda-ci@peitex.de>
+%%   Markus Lazanowski <latex@ce.tu-darmstadt.de>
+%%
+%% The development respository can be found at
+%% https://github.com/tudace/tuda_latex_templates
+%% Please use the issue tracker for feedback!
+%%
+%% ============================================================================
+%%
+% !TeX program = lualatex
+%%
+
+\documentclass[
+	fontsize=10pt,
+	marginpar=false,
+	ngerman,
+	accentcolor=3d,% Farbe für Hervorhebungen auf Basis der Deklarationen in den Corporate Design Richtlinien
+%	logofile=example-image, %Falls die Logo Dateien nicht vorliegen
+	]{tudapub}
+
+\usepackage[english, main=ngerman]{babel}
+\usepackage[babel]{csquotes}
+
+\usepackage{biblatex}
+\bibliography{DEMO-TUDaBibliography}
+
+%Formatierungen für Beispiele in diesem Dokument. Im Allgemeinen nicht notwendig!
+\let\file\texttt
+\let\code\texttt
+\let\pck\textsf
+\let\cls\textsf
+
+\usepackage{hologo}
+
+\begin{document}
+
+%Zusätzliche Metadaten für PDF/A. In diesem Fall notwendig, weil Titel ein Makro enthält.
+\Metadata{
+	author={Stefanie Blümer, Tim Pollandt},
+	title={Umgebungserkennung aus Rauschen},
+	subject={Dokumentation zum Praktikum „Implementierung in Forensik und Mediensicherheit“},
+	date=2021-02-20,
+	keywords=TU Darmstadt \sep Praktikum \sep Fraunhofer \sep Forensik \sep Audio \sep Rauschen
+}
+
+\title{Umgebungserkennung aus Rauschen in Audiodaten}
+\subtitle{Dokumentation zum Praktikum „Implementierung in Forensik und Mediensicherheit“}
+\author{Stefanie Blümer, Tim Pollandt}
+
+\titleimage{
+%	%Folgende Box kann selbstverständlich durch ein mit \includegraphics geladenes Bild ersetzt werden.
+	\color{TUDa-3d}\rule{\width}{\height}
+}
+
+
+%Varianten der Infoboxen
+\addTitleBox{Prof. Martin Steinebach\\Dr.-Ing. Sascha Zmudzinski\\Fraunhofer SIT}
+%\addTitleBoxLogo{example-image}
+%\addTitleBoxLogo*{\includegraphics[width=.3\linewidth]{example-image}}
+
+
+
+\maketitle
+
+\begin{abstract}
+	…
+\end{abstract}
+
+\begin{abstract}[english]
+	…
+\end{abstract}
+
+
+\pagebreak
+\tableofcontents
+
+\pagebreak
+\IMRADlabel{introduction}
+\section{Ansatz \& Implementierung}
+
+Unser Ansatz basiert auf [P1]………
+
+Zunächst lesen wir eine Audiodatei als Signalvektor ein. Unsere Audiodatein sind zunächst mit einem Gerät und ohne Rauschunterdrückung aufgenommene WAV-Dateien mit einer Samplerate von 44,1kHz.
+
+\IMRADlabel{methods}
+\subsection{Rauschreduzierung}
+
+Wir analysieren zunächst auf kleinen Fenstern das Vorhandensein von Sprache. Dazu nutzen wir auf den Fenstern eine Implementierung von Googles WebRTCVAD. Diese ist grundlegend nur für wenige Samplerates implementiert. Deshalb approximieren wir das Resultat durch Nutzung der logarithmisch nächsten Samplerate, was in unseren Tests zu sehr guten Ergebnissen führte. Aus der boolischen Klassifizierung der Einzelfenster nach Enthalten von Sprach-/Tonanteilen detektieren wir darauf basierend das größte Intervall mit reinem Rauschen in der gegebenen Audiodatei. Dieses wird benötigt, um eine Rauschreduzierung durchführen zu können. Die rauschreduzierte Version ist dann Grundlage für die Extraktion reinen Rauschens.
+
+Mithilfe des zuvor bestimmten größten Rauschintervalls führen wir nun eine Rauschreduzierung auf üerlappenden Fenstern durch. Diese ist ähnlich zur Implementierung in Audacity. Dennoch funktionierte sie vermutlich durch flexiblere Parametrisierung und die automatische Erkennung eines geeigneten Rauschintervalls besser\footnote{Auch wenn es hier keine klare Metrik gibt basiert diese Aussage auf einem akustischen Anhören der resultierenden Audiodateien und der Betrachtung von Zeit-Frequenz-Plots indem die jeweiligen Energien durch Farben dargestellt werden. Jeweils kann das Verbleiben von Sprachfrequenzen subjektiv beurteilt werden.}. Eine erste Rauschapproximation erhalten wir nun durch Subktraktion des rauschreduzierten Signals vom Ursprungssignal.
+
+Um verbleibende Sprachanteile „Voice Leakage“ weiter zu reduzieren, folgen wir dem Ansatz von [P2]. Dort wird Multiband Spectral Substraction vorgestellt. Basierend auf einer Matlab-Implementierung haben wir eine funktionell an unsere Bedürfnisse angepasste Python-Implementierung erstellt. Diese nutzt bei uns ebenfalls die erkannten Intervalle reinen Rauschens als Grundlage. Hierbei mussten wir zwar einen deutlichen Abfall der Gesamtenergie und damit einen potenziellen Präzisionsverlust verzeichnen, erhielten aber nach o.~g. Kriterien auch sprachfreiere Ergebnisse.
+
+\subsection{Umgebungsdetektion}
+
+Um das Rauschen verschiedener Aufnahmen verschiedenen Umgebungen zuzuordnen bzw. Zuordnungsplausibilität zu prüfen, vergleichen wir die Energieabweichungen aller Frequenzen zwischen Umgebungsrauschen und Rauschen der Aufnahme.
+
+Zunächst generieren wir also pro Umgebung eine erwartete Energie pro Frequenz. Dazu berechnen wir den Median aus allen Fenstern (Länge unterschiedlich wählbar) aller an diesem Ort aufgenommenen Aufnahmen.
+
+Zur Zuordnung bzw. Plausibilitätsprüfung berechnen wir den Median der Frequenzenergien nun also auch über die Fenster einer Aufnahme. Damit können wir nun durch verschiedene Abweichungsberechnungen verschiedene Metriken erhalten. Grundlegend mitteln wir die quadrierten Abweichungen aller Frequenzen und sehen Umgebungen mit kleineren Ergebnissen als plausibler an. Implementierte Metrikänderungen sind die folgenden:
+\begin{itemize}
+	\item Lineare (oder andere wie Wurzel) Abweichungsberechnung statt quadrierter Fehler
+	\begin{itemize}
+		\item funktionierte in Tests schlechter
+	\end{itemize}
+	\item Logarithmische y-Skalierung vor Differenzberechnung und anschließende Anwendung der Exponentialfunktion
+	\begin{itemize}
+		\item betrachtet prozentuale statt statt absoluten Abweichungen
+		\item beides ähnlich gut, abhängig von anderen Parametern
+	\end{itemize}
+	\item Mean oder Median für Differenzen
+	\begin{itemize}
+		\item derzeit: Mean über Differenzen eines Fensters
+		\item derzeit: Median über die Fenster einer Aufnahme
+	\end{itemize}
+	\item Gewichtungen der Frequenzen (x-Achse)
+	\begin{itemize}
+		\item Gleichverteilt oder niedrige Frequenzen bevorzugt → funktioniert gut
+		\item Bevorzugung niedriger Frequenzen, da dort nach FFT geringe Frequenzdichte pro Oktave → funktioniert gut
+		\item geringere Gewichtung des Sprachspektrums (implementiert durch zwei Gauß-Kurven) → funktioniert weniger gut
+	\end{itemize}
+\end{itemize}
+
+\pagebreak
+\IMRADlabel{results}
+\section{Ergebnisse}
+
+
+
+\subsection{Plots}
+
+Designalisierung
+
+Umgebungsübersicht
+
+Frequenzplots der Umgebungen
+
+\subsection{Erkennung}
+
+Wir haben in sechs Umgebungen je mindestens fünf Aufnahmen mit mindestens einem Gerät gemacht. Die Umgebungen sind die folgenden:
+* Raum 1
+* Raum 2 (ähnliche Größe, gleiches Haus)
+* Treppenhaus (gleiches Haus, Fenster geöffnet)
+* Bundesstraße
+* Wald
+* Windiger Platz
+
+
+unter Decke/Fenster auf
+
+\IMRADlabel{discussion}
+
+
+\subsection{Bewertung}
+
+\pagebreak
+\section{Future Work}
+
+\pagebreak
+\appendix
+
+\section{Bedienung}
+
+Aufrufen, Paramter setzen, …
+
+
+
+
+
+
+
+
+
+
+\end{document}
