@@ -95,16 +95,34 @@
 
 \pagebreak
 \IMRADlabel{introduction}
-\section{Ansatz \& Implementierung}
+\section{Übersicht}
 
-Unser Ansatz basiert auf \cite{ikram_digital_2010}.
+\subsection{Einführung}
+In der Forensik ist es wichtig Manipulationen in Audiodaten erkennen zu können, um etwa Beweismittel auf ihre Plausibilität prüfen zu können. Darüber hinaus ist es sehr hilfreich prüfen zu können, ob Aufnahmen an einer bestimmten Stelle aufgenommen sein könnten, plausibel sind. Dadurch ist es möglich nicht in ausreichender Qualität gefälschte Aufnahmen zu erkennen.
 
+Neben vielen weiteren Ansätzen wie etwa Hall oder ENF-Rauschen kann hierzu das spezifische Rauschen eines Ortes genutzt werden. Dieses unterscheidet sich je nach Umgebung und enthält hohe Anteile unterschiedlicher Frequenzen, die verglichen werden können. Durch Schnelle Fourier-Transformation (FFT) kann man diese aus Rauschsignalen berechnen und darauf Vergleiche ausführen.
+
+\subsection{Ansatz}
+
+Unser Ansatz basiert auf dem Paper \cite{ikram_digital_2010}. Unser Ziel ist es durch Betrachtung des Rauschens einer Audiodatei zu beurteilen, ob diese an bestimmten Orten aufgenommen wurde. Dies kann einerseits zur Plausibilitätsprüfung behaupteter Aufnahmeorte genutzt werden, ermöglicht andererseits mit Erweiterungen auch verschiedene Ansätze zur Erkennung, ob in einer Audiodatei Abschnitte aus anderen, an einem anderen Ort aufgenommenen, Aufnahmen eingefügt wurden. Dadurch wären viele Manipulationen erkennbar.
+
+Da die Erkennung von Orten und Manipulationen auf Aufnahmen funktionieren soll, in denen Rauschen vorhanden ist, müssen wir diese Sprachelemente zunächst eliminieren bzw. reduzieren, um reines Rauschen vergleichen zu können. Dieses Rauschen kann zwar über den zeitlichen Verlauf weiterhin variieren (etwa durch vorbeifahrende Autos). Der Einfluss solcher Effekte kann allerdings durch verschiedene Parameter, wie etwa die Nutzung von Median/Mittelwert in verschiedenen Verarbeitungsschritten später beeinflusst werden. Um vorzubereiten, dass Manipulationen auch erkannt werden, wenn ausschließlich ein Sprachsegment, also ein Audioteil ohne reine Rauschsequenzen, inseriert wurden, kommt ein Herausschneiden aller Teile mit Sprache nicht infrage und wir müssen auch an diesen Stellen das reine Rauschen finden.
+
+Dazu nutzen wir einen zweistufigen Ansatz in dem zunächst eine Standard-Rauschreduzierung durchgeführt wird. Durch Subtraktion dieses sprachreduzierten Signals erhalten wir eine erste Rauschapproximation. In einer weiteren Stufe reduzieren wir anschließend weiter sogenannte Voice Leakage, also verbliebene Einflüsse von Sprache. Mehr Details zur Rauschreduzierung folgen in Abschnitt \ref{noiseremove}.
+
+Anschließend folgt eine Zuordnung von Audiodateien zu verschiedenen Umgebungen. An dieser Stelle haben wir ein eigenes Vorgehen entwickelt, dass auf Abweichungen zu einem erwarteten Rauschen basiert. Dazu nehmen wir zunächst zu verschiedenen Umgebungen jeweils einige Audiodateien als Grundlage. Diese müssen jeweils ein kurzes Intervall reinen Rauschens (also Sprachfreiheit) enthalten, um optimale Ergebnisse bei der Rauschreduzierung zu erzielen. Zur Erstellung des erwarteten Rauschens der jeweiligen Umgebung wird dann allerdings der gesamte Zeitraum genutzt, da überall die Sprache wie oben beschrieben entfernt wurde. Durch Segmentierung aller in einer Umgebung aufgenommenen Dateien haben wir nun viele Segmente aus denen wir die Rauscherwartung bestimmen. Mit den Rauscherwartungen verschiedener Umgebungen vergleichen wir dann später die Rauschapproximationen zuzuordnender Aufnahmen und können so Plausibilitäten abschätzen, dass diese in einer bestimmten Umgebung aufgenommen wurden. Details zu diesem Prozess und den Metrikvariationen werden in Abschnitt \ref{envdetect} beschrieben. Weitere Ansätze werden in Abschnitt \ref{future} beschrieben.
+
+Derzeit ist die Software trotz der Schaffung vieler Grundlagen noch nicht voll für den Einsatz zur Erkennung von Manipulationen in Dateien geeignet. Nöte Schritte und Ideen dazu werden in Abschnitt \ref{manipulationdet} diskutiert.
+
+\pagebreak
+\section{Implementierung}
 Zunächst lesen wir eine Audiodatei als Signalvektor ein. Unsere Audiodatein sind zunächst mit einem Gerät und ohne Rauschunterdrückung aufgenommene WAV-Dateien mit einer Samplerate von 44,1kHz.
 
 Unsere vollständige Implementierung ist unter \cite{blumer_polltip4fm_2020} zu finden. % TODO noch nicht öffentlich
 
 \IMRADlabel{methods}
-\subsection{Rauschreduzierung}
+\subsection{Rauschextraktion}
+\label{noiseremove}
 
 Wir analysieren zunächst auf kleinen Fenstern das Vorhandensein von Sprache. Dazu nutzen wir auf den Fenstern eine Implementierung von Googles WebRTCVAD. Diese ist grundlegend nur für wenige Samplerates implementiert. Deshalb approximieren wir das Resultat durch Nutzung der logarithmisch nächsten Samplerate, was in unseren Tests zu sehr guten Ergebnissen führte. Aus der boolischen Klassifizierung der Einzelfenster nach Enthalten von Sprach-/Tonanteilen detektieren wir darauf basierend das größte Intervall mit reinem Rauschen in der gegebenen Audiodatei. Dieses wird benötigt, um eine Rauschreduzierung durchführen zu können. Die rauschreduzierte Version ist dann Grundlage für die Extraktion reinen Rauschens.
 
@@ -113,6 +131,7 @@ Mithilfe des zuvor bestimmten größten Rauschintervalls führen wir nun eine Ra
 Um verbleibende Sprachanteile „Voice Leakage“ weiter zu reduzieren, folgen wir dem Ansatz von \cite{kamath_multi-band_2002}. Dort wird Multiband Spectral Substraction vorgestellt. Basierend auf einer Matlab-Implementierung \cite{zavarehei_multi-band_nodate} haben wir eine funktionell an unsere Bedürfnisse angepasste Python-Implementierung erstellt. Diese nutzt in unserer angepassten Version ebenfalls die erkannten Intervalle reinen Rauschens als Grundlage. Hierbei mussten wir zwar einen deutlichen Abfall der Gesamtenergie und damit einen potenziellen Präzisionsverlust verzeichnen, erhielten aber nach o.~g. Kriterien auch sprachfreiere Ergebnisse.
 
 \subsection{Umgebungsdetektion}
+\label{envdetect}
 
 Um das Rauschen verschiedener Aufnahmen verschiedenen Umgebungen zuzuordnen bzw. Zuordnungsplausibilität zu prüfen, vergleichen wir die Energieabweichungen aller Frequenzen zwischen Umgebungsrauschen und Rauschen der Aufnahme.
 
@@ -142,6 +161,9 @@ Zur Zuordnung bzw. Plausibilitätsprüfung berechnen wir den Median der Frequenz
 	\end{itemize}
 \end{itemize}
 
+\subsection{Empfehlungen}
+Aktuell akzeptiert die Implementierung ausschließlich WAV-Dateien. Diese können mit verschiedenen Frequenzen erstellt werden, bei Stereo-Dateien geschieht die Analyse derzeit ausschließlich auf der linken Audio-Spur. Aufgrund der Implementierungen genutzter Frameworks gibt es zwar feste Frequenzen, auf denen die Klassifierung von Segementen als reines rauschen oder Sprache funktioniert, unsere Software approximiert an dieser Stelle jedoch durch die ähnlichste unterstützte Frequenz, wodurch wir auch etwa auf 44,1 kHz keine signifikanten Fehlklassifizierungen feststellen konnten. Wir empfehlen grundlegend Dateien von mindestens 10 Sekunden zu nutzen, die mindestens 3 Sekunden reinen Rauschens erhalten. Sollte kein Segment aus mindestens 512 Segmenten als reines Rauschen klassifiziert werden können, nehmen wir an, dass der Anfang der Datei reines Rauschen ist was zu schlechteren Ergebnissen führen kann. Die Klassifizierungsentscheidung ist aus den Plots erkennbar (s.~Abschnitt \ref{noiseclassification}), im Fall von zu wenig erkanntem reinem Rauschen wird außerdem eine entsprechende Warnung ausgegeben. Um eine realistische Schätzung des Umgebungsrauschens empfehlen wir außerdem zu jedem Ort mit etwas Abstand Aufnahmen zu machen, um zeitlich schwankende Rauschkomponenten zu mitteln. Des weiteren empfehlen wir die Nutzung eines einzigen Aufnahmegeräts ohne Lautstärkeadaption, da aktuell kein relativer Energievergleich zwischen den Frequenzen, sondern ausschließlich ein Absolutvergleich zum Einsatz kommt.
+
 \pagebreak
 \IMRADlabel{results}
 \section{Ergebnisse}
@@ -149,6 +171,8 @@ Zur Zuordnung bzw. Plausibilitätsprüfung berechnen wir den Median der Frequenz
 
 
 \subsection{Plots}
+
+\label{noiseclassification}
 
 Designalisierung
 
@@ -176,6 +200,10 @@ unter Decke/Fenster auf
 
 \pagebreak
 \section{Future Work}
+\label{future}
+
+\subsection{Manipulationserkennung}
+\label{manipulationdet}
 
 \pagebreak
 \appendix
