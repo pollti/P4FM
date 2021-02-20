@@ -232,7 +232,7 @@ def plot_spectrogram(signal: np.ndarray, rate: float, caption: str, ax, show_xla
 
 
 @ex.capture
-def main_plot_file(filenames: np.ndarray, filename_graph_denoising: str, show_graphs_denoising, denoising_graph_multipass: bool, path: str):
+def plot_denoise(filenames: np.ndarray, filename_graph_denoising: str, show_graphs_denoising, denoising_graph_multipass: bool, path: str):
     """
     Generates required files (denoised, noise) and plots spectrograms.
     :param filenames: files to process as list. Files are rows.
@@ -324,7 +324,7 @@ def main_plot_file(filenames: np.ndarray, filename_graph_denoising: str, show_gr
 
 
 @ex.capture
-def main_plot_place_comparision(recordings: dict, filename_graph_comparing: str, comparing_graph_multipass: bool, path: str):
+def plot_place_comparision(recordings: dict, filename_graph_comparing: str, comparing_graph_multipass: bool, path: str):
     """
     :param recordings: A mapping of locations to filenames to be plotted.
     :param filename_graph_comparing: name of the saved plot file
@@ -439,10 +439,10 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
             recordings_noise_only[place] = designaled_signals
 
             # Optional: plot denoising spectrums
-            main_plot_file(recs, filename_graph_denoising=f'file_denoising_steps_environment_{place}')
+            plot_denoise(recs, filename_graph_denoising=f'file_denoising_steps_environment_{place}')
 
         # Optional plot environment spectrums
-        main_plot_place_comparision(recordings, filename_graph_comparing=f'compare_denoised_files_environments')
+        plot_place_comparision(recordings, filename_graph_comparing=f'compare_denoised_files_environments')
 
         # Optional: save audio files
         save_audio_files(recordings, text='environment_')
@@ -459,12 +459,12 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
             recordings_to_be_assigned_noise_only[place] = designaled_signals
 
             # Optional: plot denoising spectrums
-            main_plot_file(recs, filename_graph_denoising=f'file_denoising_steps_assigning_{place}')
+            plot_denoise(recs, filename_graph_denoising=f'file_denoising_steps_assigning_{place}')
 
             # Optional: save audio files
             save_audio_files(recordings, text='recording_')
 
-    # Detecenvironments. TODO: save as file.
+    # Detect environments. TODO: save as file.
     for place, denoised_signals in recordings_to_be_assigned_noise_only.items():
         print(f'Environment: {place}')
         for denoised_signal in denoised_signals:

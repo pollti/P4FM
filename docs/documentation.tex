@@ -34,13 +34,17 @@
 	marginpar=false,
 	ngerman,
 	accentcolor=3d,% Farbe für Hervorhebungen auf Basis der Deklarationen in den Corporate Design Richtlinien
-	logofile=tuda_logo.pdf, %Falls die Logo Dateien nicht vorliegen
+	logofile=docs/tuda_logo.pdf, %Falls die Logo Dateien nicht vorliegen
 	]{tudapub}
 
 \usepackage[english, main=ngerman]{babel}
 \usepackage[babel]{csquotes}
 
-\usepackage{biblatex}
+\usepackage[
+backend=biber,
+style=alphabetic,
+sorting=anyt
+]{biblatex}
 \bibliography{literature}
 
 %Formatierungen für Beispiele in diesem Dokument. Im Allgemeinen nicht notwendig!
@@ -121,6 +125,8 @@ Im folgenden gehen wir auf die Teile der Implementierung ein und wie diese funkt
 
 \subsection{Allgemein}
 
+Unsere Implementierung ist in Python geschrieben. Das ermöglicht die Nutzung effizienter Library-Implementierungen von Funktionen wie etwa FFT aus NumPy und einfachen In- und Export sowie Verarbeitung von Audio-Signalen und strukturierten Daten wie CSV. Eine gute Alternative wäre eine Implementierung in der ebenfalls verbreiteten Sprache Matlab mit ähnlichen Eigenschaften.
+
 Zunächst lesen wir Audiospuren aus WAV-Dateien als Signalvektor ein. Unsere Audiodatein sind zunächst mit einem Gerät und ohne Rauschunterdrückung bzw. Lautstärkeadaption aufgenommene WAV-Dateien mit einer Samplerate von 44,1kHz und einer Tonspur. Die Software funktioniert jedoch auch mit anderen Frequenzen und kann auch Stereo-Dateien einlesen, wobei die Analysen jedoch nur auf einer der Spuren ausgeführt werden.
 
 Unsere vollständige Implementierung sowie eine Liste der benötigten pip-Pakete und ein Beispielskript zur Nutzung der Software sind unter \cite{blumer_polltip4fm_2020} zu finden. % TODO noch nicht öffentlich bzw. Skript nicht existent.´
@@ -180,18 +186,68 @@ Aktuell akzeptiert die Implementierung ausschließlich WAV-Dateien. Diese könne
 \section{Ergebnisse}
 \label{reults}
 
+Hier beschreiben und zeigen wir die Resultate unserer Tests. Zum Erhalten der Rohdaten, Audiodateien und Bilder, siehe Abschnitt~\ref{usage}.
 
+\subsection{Umgebungen}
+
+Um die Software zu testen, haben wir zunächst mehrere Aufnahmen an verschiedenen Orten erstellt. Dabei haben wir darauf geachtet sowohl diverse als auch sehr ähnliche Umgebungen vertreten zu haben. Die Umgebungen sind die folgenden:
+%\vspace{-0.2cm}
+\paragraph{Raum 1} Ein möblierter Raum in einem Wohnhaus. Die Fenster sind geschlossen und es läuft keine menschlich wahrnehmbare Technik.
+%\vspace{-0.4cm}
+\paragraph{Raum 2} Der Nachbarraum von \textbf{Raum 1} mit sehr ähnlichen Eigenschaften.
+%\vspace{-0.4cm}
+\paragraph{Treppe} Das Treppenhaus des gleichen Gebäudes. Hier sind die Fenster geöffnet und es is eine leichte Geräuschkulisse hörbar.
+%\vspace{-0.4cm}
+\paragraph{Platz} Ein Platz in der Nähe des Gebäudes. Es ist sehr windig und im Hintergrund sind immer wieder Menschen oder Autos zu hören.
+%\vspace{-0.4cm}
+\paragraph{Straße} Ein Wanderweg neben einer Bundesstraße. In dichtem Abstand sind deutlich Autos verschiedener Arten hörbar.
+%\vspace{-0.4cm}
+\paragraph{Wald} Ein Wanderweg mitten im Wald. Es ist leichtes Rascheln von Blättern und ein paar Vögel zu hören.\\
+
+An jeder Umgebung haben wir mit zwei Mobiltelefonen zunächst 5 Aufnahmen mit verschiedenen Sprachsequenzen verschiedener Menschen erstellt, die jeweils auch ein paar Sekunden Stille beinhalten. Später haben wir mit einem der Geräte nochmal weitere Aufnahmen an diesen Orten erstellt. Da unsere Software im aktuellen Stadium kaum für verschiedene Aufnahmegeräte geeignet ist, konzentrieren wir uns in den hier beschriebenen Experimenten meist auf die Aufnahmen eines Gerätes.
+
+Zu Raum 2 existieren außerdem auch eine Aufnahme des Mobiltelefons unter einer Bettdecke und eine Aufnahme bei geöffnetem Fenster.
+
+\pagebreak
 \subsection{Plots}
 
 \label{noiseclassification}
 
-Designalisierung
+Zunächst wenden wir uns der Rauschextraktion zu. In Abbildung~\ref{fig:denoise} ist dieser Prozess dargestellt. Dabei ist zu beachten, dass das linkeste Diagramm im dargestellten Verlauf nicht genau der Differenz der ersten beiden entspricht, da hier zwischendurch noch die Multiband Spectral Substraction angewendet wurde, die wie bereits erwähnt zwar die Voice Leakage, damit aber auch das Energielevel reduziert. Im oberen Beispiel von Abbildung~\ref{fig:denoise} ist eine zu starke Entfernung von Sprachsignalen erkennbar, die zu „Löchern“ im Rauschen führt. Dieser Effekt war in unseren Tests jedoch nur selten sichtbar. Während im Originalton und im rauschreduzierten Signal jeweils klar Sprache sichtbar ist (ca. Sekunden 9-25), ist dies im reinen Rauschen rechts stark reduziert. Akustische Tests bestätigen, dass zwar keine vollständig präzise Eliminierung aller Sprache erreicht wurde, diese aber stark reduziert wurde und auch mit Lautstärke-Erhöhung kaum noch verständlich ist.
 
-Umgebungsübersicht
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=1.0\textwidth]{media/denoiser2mp}
+	\caption{Darstellung der Rauschextraktion von zwei Aufnahmen (obere bzw. untere Zeile) aus der Umgebung „Raum 2“. Es handelt sich jeweils um Zeit-Frequenzplots bei denen die Farben das jeweilige Energielevel der entsprechenden Frequenz zum entsprechenden Zeitpunkt darstellen. Von links nach rechts sind jeweils erst Originaldaten, dann das rauschreduzierte Signal und schließlich das reine Rauschen nach Multiband Spectral Substraction dargestellt. Auf der x-Achse sind jeweils Sekunden, auf der y-Achse Herz aufgetragen.}
+	\label{fig:denoise}
+\end{figure}
 
-Frequenzplots der Umgebungen
+Um mehr Informationen über die erste Stufe der Rauschdetektion zu erhalten, ist in den linken Plots von Abbildung~\ref{fig:denoise} und allen Plots von Abbildung~\ref{fig:compare} die Klassifizierung in Sprache und reines Rauschen oben mit dünnen Stricken farblich dargestellt. Dabei stellt grün Sprachsequenzen, rot reines Rauschen und schwarz das längste, also zur weiteren Verarbeitung genutzte, Intervall reinen Rauschens dar. Mit kleinen Unterbrechungen entspricht dies weitgehend der intuitiven Klassifizierung anhand der akustischen Beurteilung und kann ansonsten auch in der Sensibilität angepasst werden. In der Umgebung „Platz“ sind die erkannten Rauschintervalle teils recht kurz, da durch starken Wind große Teile als Sprache klassifiziert wurden. In Tests mit einem anderen Aufnahmegerät funktionierte dies allerdings teils schlechter und klassifizierte zu oft als Sprache, was zu wenig reinen Rauschintervallen führte. Erklärt werden kann dies unter Umständen mit einem dort aktivierten Software-Rauschfilter, der zu unreinen Audiosignalen führte.
 
+Als nächstes betrachten wir nun also die Rauschsignale verschiedener Aufnahmen an verschiedenen Umgebungen in Abbildung~\ref{fig:compare}. Teilweise sind in diesen Plots in den Spalten stärkere Gemeinsamkeiten erkennbar, die für die spätere Klassifizierung vielversprechend sind. Teilweise wirken die Spalten allerdings auch sehr ähnlich und weisen auch innerhalb der Spalten Abweichungen auf. Wie zu erwarten, sind sich beispielsweise die Umgebungen „Raum~1“ und „Raum~2“ recht ähnlich. Akustisch sind diese ebenfalls nicht zu unterscheiden, die Umgebungen „Platz“ (durch starken Wind) und „Straße“ (durch lokalen Geräuschanstieg durch Autos) heben sich akustisch noch meist ab.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=1.0\textwidth]{media/comp}
+	\caption{Darstellung der Rauschapproximationen verschiedener Aufnahmen (Spalten sind Umgebungen, Zeilen verschiedene dort aufgenommene Aufnahmen). Es handelt sich jeweils um Zeit-Frequenzplots bei denen die Farben das jeweilige Energielevel der entsprechenden Frequenz zum entsprechenden Zeitpunkt darstellen. Die Multiband Spectral Substraction war hier deaktiviert, da die Unterschiede dadurch optisch besser erkennbar sind. Auf der x-Achse sind jeweils Sekunden, auf der y-Achse Herz aufgetragen.}
+	\label{fig:compare}
+\end{figure}
+
+Schließlich wenden wir uns noch dem Vergleich der Umgebungs-Rauschapproximationen zu. Um die Umgebungen zu vergleichen, haben wir für jede dieser Umgebungen einen Vektor von Energie in verschiedenen Frequenzbändern (vgl. Abschnitt \ref{envdetect}). Dieser ist in Abbildung~\ref{fig:envs} für unsere Umgebungen dargestellt. Die Umgebung „Straße“ hebt sich hier schon durch hohe Intensität deutlich ab. „Platz“ und „Wald“ haben jeweils ein Maximum um $7\cdot10^3$~Hz, unterschieden sich aber auch im Verlauf in Richtung niedriger Frequenzen. Die drei verbleibenden und im gleichen Haus aufgenommenen Aufnahmen unterscheiden sich hingegen weniger deutlich. Hier zeichnen sich Schwierigkeiten bei der Klassifizierung der Aufnahmen ab.
+
+In allen Graphen ist ein starker Abfall der Intensitäten in hohen Frequenzen zu verzeichnen, der sowohl durch wenig akustischen Signalen in diesem Bereich als auch durch Schwächen des Aufnahmegerätes erklärbar ist. Außerdem haben alle Umgebungen einen starken punktuellen Anstieg bei etwa $1,5\cdot10^4$~Hz. Da dieser bei Referenzaufnahmen mit anderen Geräten nicht auftritt, ist dies sicherlich auf eine Schwäche des Aufnahmegeräts, beispielsweise durch eine Eigenfrequenz zurückzuführen.x
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.6\textwidth]{media/envs}
+	\caption{Darstellung der Rauschapproximationen verschiedener Umgebungen (eine Farbe pro Umgebung). Es handelt sich um einen Frequenz-Intensitätsplots. Die Multiband Spectral Substraction war hier deaktiviert, die Unterschiede zu aktivierter Multiband Spectral Substraction sind nicht groß. Auf der x-Achse sind Herz aufgetragen.}
+	\label{fig:envs}
+\end{figure}
+
+\pagebreak
 \subsection{Erkennung}
+
+gehen deshalb davon aus, dass die Ergebnisverfäschung durch die vorherige Median-Bildung gering ist.
 
 Wir haben in sechs Umgebungen je mindestens fünf Aufnahmen mit mindestens einem Gerät gemacht. Die Umgebungen sind die folgenden:
 * Raum 1
@@ -209,9 +265,20 @@ unter Decke/Fenster auf
 
 \subsection{Bewertung}
 
+vgl. anderes Paper
+
 \pagebreak
 \section{Future Work}
 \label{future}
+GaussSamplen
+
+Häufigkeit von Autos
+
+Mean für Manipulation
+
+verschiedene Aufnahmegeräte
+
+Grenzwert
 
 \subsection{Manipulationserkennung}
 \label{manipulationdet}
