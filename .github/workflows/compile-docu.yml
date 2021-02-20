@@ -1,4 +1,4 @@
-name: Compile SWOT
+name: Compile Report
 on:
   workflow_dispatch:
   push:
@@ -13,12 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Go to 'docs' Folder
-        run: cd docs
       - name: Compile Report
         uses: dante-ev/latex-action@v0.2.0
         with:
-          root_file: documentation.tex
+          root_file: docs/documentation.tex
           args: -lualatex -latexoption=-file-line-error -latexoption=-interaction=nonstopmode
       - name: Upload Compiled Report
         uses: actions/upload-artifact@v2

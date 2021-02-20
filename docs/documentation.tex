@@ -41,7 +41,7 @@
 \usepackage[babel]{csquotes}
 
 \usepackage{biblatex}
-\bibliography{DEMO-TUDaBibliography}
+\bibliography{literature}
 
 %Formatierungen für Beispiele in diesem Dokument. Im Allgemeinen nicht notwendig!
 \let\file\texttt
@@ -97,9 +97,11 @@
 \IMRADlabel{introduction}
 \section{Ansatz \& Implementierung}
 
-Unser Ansatz basiert auf [P1]………
+Unser Ansatz basiert auf \cite{ikram_digital_2010}.
 
 Zunächst lesen wir eine Audiodatei als Signalvektor ein. Unsere Audiodatein sind zunächst mit einem Gerät und ohne Rauschunterdrückung aufgenommene WAV-Dateien mit einer Samplerate von 44,1kHz.
+
+Unsere vollständige Implementierung ist unter \cite{blumer_polltip4fm_2020} zu finden. % TODO noch nicht öffentlich
 
 \IMRADlabel{methods}
 \subsection{Rauschreduzierung}
@@ -108,7 +110,7 @@ Wir analysieren zunächst auf kleinen Fenstern das Vorhandensein von Sprache. Da
 
 Mithilfe des zuvor bestimmten größten Rauschintervalls führen wir nun eine Rauschreduzierung auf üerlappenden Fenstern durch. Diese ist ähnlich zur Implementierung in Audacity. Dennoch funktionierte sie vermutlich durch flexiblere Parametrisierung und die automatische Erkennung eines geeigneten Rauschintervalls besser\footnote{Auch wenn es hier keine klare Metrik gibt basiert diese Aussage auf einem akustischen Anhören der resultierenden Audiodateien und der Betrachtung von Zeit-Frequenz-Plots indem die jeweiligen Energien durch Farben dargestellt werden. Jeweils kann das Verbleiben von Sprachfrequenzen subjektiv beurteilt werden.}. Eine erste Rauschapproximation erhalten wir nun durch Subktraktion des rauschreduzierten Signals vom Ursprungssignal.
 
-Um verbleibende Sprachanteile „Voice Leakage“ weiter zu reduzieren, folgen wir dem Ansatz von [P2]. Dort wird Multiband Spectral Substraction vorgestellt. Basierend auf einer Matlab-Implementierung haben wir eine funktionell an unsere Bedürfnisse angepasste Python-Implementierung erstellt. Diese nutzt bei uns ebenfalls die erkannten Intervalle reinen Rauschens als Grundlage. Hierbei mussten wir zwar einen deutlichen Abfall der Gesamtenergie und damit einen potenziellen Präzisionsverlust verzeichnen, erhielten aber nach o.~g. Kriterien auch sprachfreiere Ergebnisse.
+Um verbleibende Sprachanteile „Voice Leakage“ weiter zu reduzieren, folgen wir dem Ansatz von \cite{kamath_multi-band_2002}. Dort wird Multiband Spectral Substraction vorgestellt. Basierend auf einer Matlab-Implementierung \cite{zavarehei_multi-band_nodate} haben wir eine funktionell an unsere Bedürfnisse angepasste Python-Implementierung erstellt. Diese nutzt in unserer angepassten Version ebenfalls die erkannten Intervalle reinen Rauschens als Grundlage. Hierbei mussten wir zwar einen deutlichen Abfall der Gesamtenergie und damit einen potenziellen Präzisionsverlust verzeichnen, erhielten aber nach o.~g. Kriterien auch sprachfreiere Ergebnisse.
 
 \subsection{Umgebungsdetektion}
 
@@ -183,11 +185,11 @@ unter Decke/Fenster auf
 Aufrufen, Paramter setzen, …
 
 
+\pagebreak
+\printbibliography
 
 
-
-
-
+%\affidavit
 
 
 
