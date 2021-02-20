@@ -116,7 +116,7 @@ def signal_reconstruction(xnew: np.ndarray, yphase: np.ndarray = None, window_le
 
 def vad(signal: np.ndarray, noise: np.ndarray, noise_counter: int = 0, noise_margin: int = 3, hangover: int = 8) -> Tuple[int, int, int, float]:
     """
-    Spectral Distance Vioce Activity Detector.
+    Spectral Distance Voice Activity Detector.
     :param signal: magnitude spectrum of current frame to be {noise,speech} labeled
     :param noise: magnitude spectrum of noise as estimated
     :param noise_counter: number of noise frames directly preceding. Default: 0 (no noise directly before)

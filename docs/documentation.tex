@@ -30,11 +30,11 @@
 %%
 
 \documentclass[
-	fontsize=10pt,
+	fontsize=10.5pt,
 	marginpar=false,
 	ngerman,
 	accentcolor=3d,% Farbe für Hervorhebungen auf Basis der Deklarationen in den Corporate Design Richtlinien
-%	logofile=example-image, %Falls die Logo Dateien nicht vorliegen
+	logofile=tuda_logo.pdf, %Falls die Logo Dateien nicht vorliegen
 	]{tudapub}
 
 \usepackage[english, main=ngerman]{babel}
@@ -96,6 +96,7 @@
 \pagebreak
 \IMRADlabel{introduction}
 \section{Übersicht}
+Hier werden wir kurz in die Thematik einführen und einen Überblick über die Teile des Projekts geben.
 
 \subsection{Einführung}
 In der Forensik ist es wichtig Manipulationen in Audiodaten erkennen zu können, um etwa Beweismittel auf ihre Plausibilität prüfen zu können. Darüber hinaus ist es sehr hilfreich prüfen zu können, ob Aufnahmen an einer bestimmten Stelle aufgenommen sein könnten, plausibel sind. Dadurch ist es möglich nicht in ausreichender Qualität gefälschte Aufnahmen zu erkennen.
@@ -116,20 +117,27 @@ Derzeit ist die Software trotz der Schaffung vieler Grundlagen noch nicht voll f
 
 \pagebreak
 \section{Implementierung}
-Zunächst lesen wir eine Audiodatei als Signalvektor ein. Unsere Audiodatein sind zunächst mit einem Gerät und ohne Rauschunterdrückung aufgenommene WAV-Dateien mit einer Samplerate von 44,1kHz.
+Im folgenden gehen wir auf die Teile der Implementierung ein und wie diese funktionieren. Details zu den einzelnen Methoden sind im Quelltext dokumentiert und werden hier deshalb ausgelassen. Die Details zur Bedienung unserer Software sind im Abschnitt \ref{usage} zu finden. Auf die Ergebnisse und Grafiken aus der Software gehen wir in Abschnitt \ref{reults} ein.
 
-Unsere vollständige Implementierung ist unter \cite{blumer_polltip4fm_2020} zu finden. % TODO noch nicht öffentlich
+\subsection{Allgemein}
+
+Zunächst lesen wir Audiospuren aus WAV-Dateien als Signalvektor ein. Unsere Audiodatein sind zunächst mit einem Gerät und ohne Rauschunterdrückung bzw. Lautstärkeadaption aufgenommene WAV-Dateien mit einer Samplerate von 44,1kHz und einer Tonspur. Die Software funktioniert jedoch auch mit anderen Frequenzen und kann auch Stereo-Dateien einlesen, wobei die Analysen jedoch nur auf einer der Spuren ausgeführt werden.
+
+Unsere vollständige Implementierung sowie eine Liste der benötigten pip-Pakete und ein Beispielskript zur Nutzung der Software sind unter \cite{blumer_polltip4fm_2020} zu finden. % TODO noch nicht öffentlich bzw. Skript nicht existent.´
 
 \IMRADlabel{methods}
 \subsection{Rauschextraktion}
 \label{noiseremove}
 
-Wir analysieren zunächst auf kleinen Fenstern das Vorhandensein von Sprache. Dazu nutzen wir auf den Fenstern eine Implementierung von Googles WebRTCVAD. Diese ist grundlegend nur für wenige Samplerates implementiert. Deshalb approximieren wir das Resultat durch Nutzung der logarithmisch nächsten Samplerate, was in unseren Tests zu sehr guten Ergebnissen führte. Aus der boolischen Klassifizierung der Einzelfenster nach Enthalten von Sprach-/Tonanteilen detektieren wir darauf basierend das größte Intervall mit reinem Rauschen in der gegebenen Audiodatei. Dieses wird benötigt, um eine Rauschreduzierung durchführen zu können. Die rauschreduzierte Version ist dann Grundlage für die Extraktion reinen Rauschens.
+Wir analysieren zunächst auf kleinen Fenstern das Vorhandensein von Sprache. Dazu nutzen wir auf den Fenstern eine Implementierung von Googles WebRTCVAD \cite{wiseman_webrtcvad_nodate}. Diese ist grundlegend nur für wenige Samplerates implementiert. Deshalb approximieren wir das Resultat durch Nutzung der logarithmisch nächsten Samplerate, was in unseren Tests zu sehr guten Ergebnissen führte. Aus der boolischen Klassifizierung kleiner Fenster nach Enthalten von Sprach- bzw. Tonanteilen detektieren wir darauf basierend das größte Intervall mit reinem Rauschen in der gegebenen Audiodatei. Dieses wird benötigt, um eine Rauschreduzierung durchführen zu können. Die rauschreduzierte Version ist dann Grundlage für die Extraktion reinen Rauschens.
 
-Mithilfe des zuvor bestimmten größten Rauschintervalls führen wir nun eine Rauschreduzierung auf üerlappenden Fenstern durch. Diese ist ähnlich zur Implementierung in Audacity. Dennoch funktionierte sie vermutlich durch flexiblere Parametrisierung und die automatische Erkennung eines geeigneten Rauschintervalls besser\footnote{Auch wenn es hier keine klare Metrik gibt basiert diese Aussage auf einem akustischen Anhören der resultierenden Audiodateien und der Betrachtung von Zeit-Frequenz-Plots indem die jeweiligen Energien durch Farben dargestellt werden. Jeweils kann das Verbleiben von Sprachfrequenzen subjektiv beurteilt werden.}. Eine erste Rauschapproximation erhalten wir nun durch Subktraktion des rauschreduzierten Signals vom Ursprungssignal.
+Mithilfe des zuvor bestimmten größten Rauschintervalls führen wir nun eine Rauschreduzierung auf überlappenden Fenstern durch. Diese ist ähnlich zur Implementierung in Audacity. Dennoch funktionierte sie – vermutlich durch flexiblere Parametrisierung und die automatische Erkennung eines geeigneten Rauschintervalls – besser\footnote{Auch wenn es hier keine klare Metrik gibt, basiert diese Aussage auf einem akustischen Anhören der resultierenden Audiodateien und der Betrachtung von Zeit-Frequenz-Plots in denen die jeweiligen Energien durch Farben dargestellt werden. Jeweils kann das Verbleiben von Sprachfrequenzen subjektiv beurteilt werden.}. Eine erste Rauschapproximation erhalten wir nun durch Subtraktion des rauschreduzierten Signals vom Ursprungssignal.
 
-Um verbleibende Sprachanteile „Voice Leakage“ weiter zu reduzieren, folgen wir dem Ansatz von \cite{kamath_multi-band_2002}. Dort wird Multiband Spectral Substraction vorgestellt. Basierend auf einer Matlab-Implementierung \cite{zavarehei_multi-band_nodate} haben wir eine funktionell an unsere Bedürfnisse angepasste Python-Implementierung erstellt. Diese nutzt in unserer angepassten Version ebenfalls die erkannten Intervalle reinen Rauschens als Grundlage. Hierbei mussten wir zwar einen deutlichen Abfall der Gesamtenergie und damit einen potenziellen Präzisionsverlust verzeichnen, erhielten aber nach o.~g. Kriterien auch sprachfreiere Ergebnisse.
+Um verbleibende Sprachanteile „Voice Leakage“ weiter zu reduzieren, folgen wir dem Ansatz von \cite{kamath_multi-band_2002}. Dort wird Multiband Spectral Substraction vorgestellt, durch den frquenzbandspezifisch Sprachanteile im Rauschen und zuvor zu stark reduziertes Rauschen ausgeglichen werden. Die Formeln lassen wir hier aus und verweisen auf das o.~g. Paper sowie den Quellcode. Unter Zuhilfenahme einer Matlab-Implementierung \cite{zavarehei_multi-band_nodate} haben wir eine funktionell an unsere Bedürfnisse angepasste Python-Implementierung erstellt. Diese nutzt in unserer angepassten Version die zuvor erkannten Intervalle reinen Rauschens als Grundlage. Hierbei mussten wir zwar einen deutlichen Abfall der Gesamtenergie und damit einen potenziellen Präzisionsverlust verzeichnen, erhielten aber nach o.~g. Kriterien auch sprachfreiere Ergebnisse.
 
+Zu beachten ist, dass auch in der Implementierung der Multiband Spectral Substraction ein Voice Activity Detector~(VAD) zwecks Sprachklassifizierung zum Einsatz kommt. Im Gegensatz zum zuvor erwähnten, basiert dieser jedoch darauf bereits ein kurzes Intervall reinen Rauschens als Grundlage zu haben und bekommt somit bei uns auch das längste Rauschintervall aus der Klassifizierung vor der ersten Rauschreduzierung.
+
+\pagebreak
 \subsection{Umgebungsdetektion}
 \label{envdetect}
 
@@ -139,35 +147,38 @@ Zunächst generieren wir also pro Umgebung eine erwartete Energie pro Frequenz. 
 
 Zur Zuordnung bzw. Plausibilitätsprüfung berechnen wir den Median der Frequenzenergien nun also auch über die Fenster einer Aufnahme. Damit können wir nun durch verschiedene Abweichungsberechnungen verschiedene Metriken erhalten. Grundlegend mitteln wir die quadrierten Abweichungen aller Frequenzen und sehen Umgebungen mit kleineren Ergebnissen als plausibler an. Implementierte Metrikänderungen sind die folgenden:
 \begin{itemize}
-	\item Lineare (oder andere wie Wurzel) Abweichungsberechnung statt quadrierter Fehler
+	\item Lineare (oder andere wie Wurzel) Abweichungsberechnung statt quadrierter Abweichungsberechnung
 	\begin{itemize}
+		\item gewichtet einzelne starke Abweichungen weniger extrem
 		\item funktionierte in Tests schlechter
 	\end{itemize}
-	\item Logarithmische y-Skalierung vor Differenzberechnung und anschließende Anwendung der Exponentialfunktion
+	\item Logarithmische y-Skalierung vor Differenzberechnung und anschließende Anwendung der Exponentialfunktionauf die Differenzen
 	\begin{itemize}
-		\item betrachtet prozentuale statt statt absoluten Abweichungen
+		\item betrachtet prozentuale statt absoluten Abweichungen
 		\item beides ähnlich gut, abhängig von anderen Parametern
 	\end{itemize}
 	\item Mean oder Median für Differenzen
 	\begin{itemize}
-		\item derzeit: Mean über Differenzen eines Fensters
-		\item derzeit: Median über die Fenster einer Aufnahme
+		\item derzeit: Mean über Differenzen eines Fensters, um starke Abweichungen in ein paar Frequenzen nicht zu vernachlässigen
+		\item derzeit: Median über die Fenster einer Aufnahme, um einzelne Signalstörungen (bspw. herunterfallende Gegenstände) zu vernachlässigen
 	\end{itemize}
 	\item Gewichtungen der Frequenzen (x-Achse)
 	\begin{itemize}
-		\item Gleichverteilt oder niedrige Frequenzen bevorzugt → funktioniert gut
+		\item gleichverteilt (Standard) → funktioniert gut
 		\item Bevorzugung niedriger Frequenzen, da dort nach FFT geringe Frequenzdichte pro Oktave → funktioniert gut
 		\item geringere Gewichtung des Sprachspektrums (implementiert durch zwei Gauß-Kurven) → funktioniert weniger gut
 	\end{itemize}
 \end{itemize}
 
+% TODO sacred hier oder bei Bedienung
+
 \subsection{Empfehlungen}
-Aktuell akzeptiert die Implementierung ausschließlich WAV-Dateien. Diese können mit verschiedenen Frequenzen erstellt werden, bei Stereo-Dateien geschieht die Analyse derzeit ausschließlich auf der linken Audio-Spur. Aufgrund der Implementierungen genutzter Frameworks gibt es zwar feste Frequenzen, auf denen die Klassifierung von Segementen als reines rauschen oder Sprache funktioniert, unsere Software approximiert an dieser Stelle jedoch durch die ähnlichste unterstützte Frequenz, wodurch wir auch etwa auf 44,1 kHz keine signifikanten Fehlklassifizierungen feststellen konnten. Wir empfehlen grundlegend Dateien von mindestens 10 Sekunden zu nutzen, die mindestens 3 Sekunden reinen Rauschens erhalten. Sollte kein Segment aus mindestens 512 Segmenten als reines Rauschen klassifiziert werden können, nehmen wir an, dass der Anfang der Datei reines Rauschen ist was zu schlechteren Ergebnissen führen kann. Die Klassifizierungsentscheidung ist aus den Plots erkennbar (s.~Abschnitt \ref{noiseclassification}), im Fall von zu wenig erkanntem reinem Rauschen wird außerdem eine entsprechende Warnung ausgegeben. Um eine realistische Schätzung des Umgebungsrauschens empfehlen wir außerdem zu jedem Ort mit etwas Abstand Aufnahmen zu machen, um zeitlich schwankende Rauschkomponenten zu mitteln. Des weiteren empfehlen wir die Nutzung eines einzigen Aufnahmegeräts ohne Lautstärkeadaption, da aktuell kein relativer Energievergleich zwischen den Frequenzen, sondern ausschließlich ein Absolutvergleich zum Einsatz kommt.
+Aktuell akzeptiert die Implementierung ausschließlich WAV-Dateien. Diese können mit verschiedenen Frequenzen erstellt werden, bei Stereo-Dateien geschieht die Analyse derzeit ausschließlich auf der linken Audio-Spur. Aufgrund der Implementierungen genutzter Frameworks gibt es zwar feste Frequenzen, auf denen die Klassifierung von Segementen als reines Rauschen oder Sprache funktioniert, unsere Software approximiert an dieser Stelle jedoch durch die ähnlichste unterstützte Frequenz, wodurch wir auch beispielsweise auf 44,1 kHz keine signifikanten Fehlklassifizierungen feststellen konnten. Wir empfehlen grundlegend Dateien von mindestens 10 Sekunden zu nutzen, die mindestens 3 Sekunden reinen Rauschens erhalten. Sollte kein Segment aus mindestens 512 Segmenten als reines Rauschen klassifiziert werden können, nehmen wir an, dass der Anfang der Datei reines Rauschen ist was zu schlechteren Ergebnissen führen kann. Die Klassifizierungsentscheidung ist aus den Plots erkennbar (s.~Abschnitt \ref{noiseclassification}), im Fall von zu wenig erkanntem reinem Rauschen wird außerdem eine entsprechende Warnung ausgegeben. Um eine realistische Schätzung des Umgebungsrauschens zu erhalten, empfehlen wir außerdem zu jedem Ort mit etwas Abstand Aufnahmen zu machen, um zeitlich schwankende Rauschkomponenten zu mitteln. Des Weiteren empfehlen wir die Nutzung eines einzigen Aufnahmegeräts ohne Lautstärkeadaption, da aktuell kein relativer Energievergleich zwischen den Frequenzen, sondern ausschließlich ein Absolutvergleich zum Einsatz kommt.
 
 \pagebreak
 \IMRADlabel{results}
 \section{Ergebnisse}
-
+\label{reults}
 
 
 \subsection{Plots}
@@ -206,11 +217,15 @@ unter Decke/Fenster auf
 \label{manipulationdet}
 
 \pagebreak
-\appendix
 
 \section{Bedienung}
+\label{usage}
 
-Aufrufen, Paramter setzen, …
+pip-Pakete, Aufrufen, Paramter setzen, Daten interpretieren, ausgegeben Dateien, Minimalbeispiel, …
+
+\appendix
+
+
 
 
 \pagebreak
