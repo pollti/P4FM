@@ -1,3 +1,4 @@
+from deprecated import deprecated
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
@@ -12,7 +13,7 @@ def environment_generator(signals, size: int = 256) -> np.ndarray:
     :return: frequency-energy expectation for this environment.
     """
     all_data = None
-    frequencies = None
+    # frequencies = None
     for signal in signals:
         signal = segment(signal, size, 0.4, sp.signal.gaussian(size, size * 0.4))
         data = np.abs(np.fft.rfft(signal, axis=0))
@@ -22,7 +23,7 @@ def environment_generator(signals, size: int = 256) -> np.ndarray:
 
 
 def environment_detector(rate: int, signal: np.ndarray, *envs: np.ndarray, size: int = 256) -> np.ndarray:
-    # TODO pass error_mean on from not yet existing parameters of this function.
+    # TODO pass error_mean parameters on from not yet existing parameters of this function.
     """
     Detects environment plausibility for a given recorded signal and several environments. Result dimension is highly dependent on squared error paramters.
     :param rate: Sample rate of all signals.
@@ -33,7 +34,7 @@ def environment_detector(rate: int, signal: np.ndarray, *envs: np.ndarray, size:
     """
     signal = segment(signal, size, 0.4, sp.signal.gaussian(size, size * 0.4))
     data = np.abs(np.fft.rfft(signal, axis=0))
-    windows = data.shape[1]
+    # windows = data.shape[1]
     env_values = None
     for env in envs:
         errors = None
@@ -90,9 +91,10 @@ def error(a: np.ndarray, b: np.ndarray, squared: bool):
     return np.square(a - b) if squared else np.abs(a - b)
 
 
+@deprecated("Only used for debugging purposes. See plot in main for environment plot.")
 def plot_fourier(rate: int, *signals: np.ndarray, size: int = 256):
     """
-    Plots a frequency-energy diagram for the provided signals. Energy levels are meaned, one color is used per given signal. May also be used to se environments. Plots are not saved to disk.
+    Plots a frequency-energy diagram for the provided signals. Energy levels are meaned, one color is used per given signal. May also be used to see environments. Plots are not saved to disk.
     :param rate: Sample rate of all signals.
     :param signals: The signals to plot as numpy arrays. Must have at least [size] samples each, but should be way longer.
     :param size: The window size for a single rfft.
@@ -103,8 +105,7 @@ def plot_fourier(rate: int, *signals: np.ndarray, size: int = 256):
         signal = segment(signal, size, 0.4, sp.signal.gaussian(size, size * 0.4))
         data = np.fft.rfft(signal, axis=0)
 
-        ### Only for the median plot:
-        data = np.abs(data)  # maybe swap square and mean
+        data = np.abs(data)
         # data = np.sqrt(data ** 2)
         all_data = data if all_data is None else np.hstack((all_data, data))
 
