@@ -37,10 +37,10 @@ def ex_config():
 
     path = "Audio/"  # The relative path to the recordings depends on working directory
     ending = ".wav"
-    recordings = {"Raum 1": ["Fabi01", "Fabi02", "Fabi03", "Fabi04", "Fabi05"],
-                  "Raum 2": ["Tim01", "Tim02", "Tim03", "Tim04", "Tim05"],
+    recordings = {"Raum1": ["Fabi01", "Fabi02", "Fabi03", "Fabi04", "Fabi05"],
+                  "Raum2": ["Tim01", "Tim02", "Tim03", "Tim04", "Tim05"],
                   "Platz": ["Platz01", "Platz02", "Platz03", "Platz04", "Platz05"],
-                  "Straße": ["Street01", "Street02", "Street03", "Street04", "Street05"],
+                  "Strasse": ["Street01", "Street02", "Street03", "Street04", "Street05"],
                   "Treppe": ["Treppe01", "Treppe02", "Treppe03", "Treppe04", "Treppe05"],
                   "Wald": ["Wald01", "Wald02", "Wald03", "Wald04", "Wald05"]}  # filenames assigned to location
     recordings_to_be_assigned = deepcopy(
@@ -320,7 +320,7 @@ def main_plot_file(filenames: np.ndarray, filename_graph_denoising: str, show_gr
             fig.colorbar(c, cax=cbar_ax)
             fig.show()
 
-        ex.add_artifact(f'{dirpath}/{filename_graph_denoising}.png', name=filename_graph_denoising)
+        ex.add_artifact(f'{dirpath}/{filename_graph_denoising}.png', name=filename_graph_denoising + '.png')
 
 
 @ex.capture
@@ -381,7 +381,7 @@ def main_plot_place_comparision(recordings: dict, filename_graph_comparing: str,
             fig.colorbar(c, cax=cbar_ax)
             fig.show()
 
-        ex.add_artifact(f'{dirpath}/{filename_graph_comparing}.png', name=filename_graph_comparing)
+        ex.add_artifact(f'{dirpath}/{filename_graph_comparing}.png', name=filename_graph_comparing + '.png')
 
 
 @ex.capture
@@ -487,5 +487,5 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
     with tempfile.TemporaryDirectory() as dirpath:
         filename = "environments_fourier"
         plt.savefig(f'{dirpath}/{filename}.png')
-        ex.add_artifact(f'{dirpath}/{filename}.png', name=filename)
+        ex.add_artifact(f'{dirpath}/{filename}.png', name=filename + '.png')
     plt.show()
