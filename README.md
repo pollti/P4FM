@@ -19,6 +19,6 @@ Run main.py. In main(), functionalities can be disabled and parameters for files
 
 /src: Source code
 
-/media: Audio files
+/Audio: Audio files
 
-/res: Results (image and pdf files for spectrograms)
+/results: Results (image files for spectrograms, audio files, logs, …)
