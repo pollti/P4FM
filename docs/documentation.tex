@@ -33,8 +33,7 @@
 	fontsize=10.5pt,
 	marginpar=false,
 	ngerman,
-	accentcolor=3d,% Farbe für Hervorhebungen auf Basis der Deklarationen in den Corporate Design Richtlinien
-	logofile=docs/tuda_logo.pdf, %Falls die Logo Dateien nicht vorliegen
+	accentcolor=3d
 	]{tudapub}
 
 \usepackage[english, main=ngerman]{babel}
@@ -47,19 +46,13 @@ sorting=anyt
 ]{biblatex}
 \bibliography{literature}
 
-%Formatierungen für Beispiele in diesem Dokument. Im Allgemeinen nicht notwendig!
-\let\file\texttt
-\let\code\texttt
-\let\pck\textsf
-\let\cls\textsf
-
 \usepackage{hologo}
 
 \begin{document}
 
 %Zusätzliche Metadaten für PDF/A. In diesem Fall notwendig, weil Titel ein Makro enthält.
 \Metadata{
-	author={Stefanie Blümer, Tim Pollandt},
+	author={A. Stefanie Blümer, Tim Pollandt},
 	title={Umgebungserkennung aus Rauschen},
 	subject={Dokumentation zum Praktikum „Implementierung in Forensik und Mediensicherheit“},
 	date=2021-02-20,
@@ -121,7 +114,7 @@ Derzeit ist die Software trotz der Schaffung vieler Grundlagen noch nicht voll f
 
 \pagebreak
 \section{Implementierung}
-Im folgenden gehen wir auf die Teile der Implementierung ein und wie diese funktionieren. Details zu den einzelnen Methoden sind im Quelltext dokumentiert und werden hier deshalb ausgelassen. Die Details zur Bedienung unserer Software sind im Abschnitt \ref{usage} zu finden. Auf die Ergebnisse und Grafiken aus der Software gehen wir in Abschnitt \ref{reults} ein.
+Im folgenden gehen wir auf die Teile der Implementierung ein und wie diese funktionieren. Details zu den einzelnen Methoden sind im Quelltext dokumentiert und werden hier deshalb ausgelassen. Die Details zur Bedienung unserer Software sind im Abschnitt \ref{usage} zu finden. Auf die Ergebnisse und Grafiken aus der Software gehen wir in Abschnitt \ref{reults} ein. Details zu den generierbaren Plots folgen in den Abschnitten \ref{plots} und \ref{usage}.
 
 \subsection{Allgemein}
 
@@ -158,7 +151,8 @@ Zur Zuordnung bzw. Plausibilitätsprüfung berechnen wir den Median der Frequenz
 		\item gewichtet einzelne starke Abweichungen weniger extrem
 		\item funktionierte in Tests schlechter
 	\end{itemize}
-	\item Logarithmische y-Skalierung vor Differenzberechnung und anschließende Anwendung der Exponentialfunktionauf die Differenzen
+	\item Logarithmische y-Skalierung vor Differenzberechnung und anschließende Anwendung der Exponentialfunktion
+auf die Differenzen
 	\begin{itemize}
 		\item betrachtet prozentuale statt absoluten Abweichungen
 		\item beides ähnlich gut, abhängig von anderen Parametern
@@ -179,7 +173,7 @@ Zur Zuordnung bzw. Plausibilitätsprüfung berechnen wir den Median der Frequenz
 % TODO sacred hier oder bei Bedienung
 
 \subsection{Empfehlungen}
-Aktuell akzeptiert die Implementierung ausschließlich WAV-Dateien. Diese können mit verschiedenen Frequenzen erstellt werden, bei Stereo-Dateien geschieht die Analyse derzeit ausschließlich auf der linken Audio-Spur. Aufgrund der Implementierungen genutzter Frameworks gibt es zwar feste Frequenzen, auf denen die Klassifierung von Segementen als reines Rauschen oder Sprache funktioniert, unsere Software approximiert an dieser Stelle jedoch durch die ähnlichste unterstützte Frequenz, wodurch wir auch beispielsweise auf 44,1 kHz keine signifikanten Fehlklassifizierungen feststellen konnten. Wir empfehlen grundlegend Dateien von mindestens 10 Sekunden zu nutzen, die mindestens 3 Sekunden reinen Rauschens erhalten. Sollte kein Segment aus mindestens 512 Segmenten als reines Rauschen klassifiziert werden können, nehmen wir an, dass der Anfang der Datei reines Rauschen ist was zu schlechteren Ergebnissen führen kann. Die Klassifizierungsentscheidung ist aus den Plots erkennbar (s.~Abschnitt \ref{noiseclassification}), im Fall von zu wenig erkanntem reinem Rauschen wird außerdem eine entsprechende Warnung ausgegeben. Um eine realistische Schätzung des Umgebungsrauschens zu erhalten, empfehlen wir außerdem zu jedem Ort mit etwas Abstand Aufnahmen zu machen, um zeitlich schwankende Rauschkomponenten zu mitteln. Des Weiteren empfehlen wir die Nutzung eines einzigen Aufnahmegeräts ohne Lautstärkeadaption, da aktuell kein relativer Energievergleich zwischen den Frequenzen, sondern ausschließlich ein Absolutvergleich zum Einsatz kommt.
+Aktuell akzeptiert die Implementierung ausschließlich WAV-Dateien. Diese können mit verschiedenen Frequenzen erstellt werden, bei Stereo-Dateien geschieht die Analyse derzeit ausschließlich auf der linken Audio-Spur. Aufgrund der Implementierungen genutzter Frameworks gibt es zwar feste Frequenzen, auf denen die Klassifierung von Segementen als reines Rauschen oder Sprache funktioniert, unsere Software approximiert an dieser Stelle jedoch durch die ähnlichste unterstützte Frequenz, wodurch wir auch beispielsweise auf 44,1 kHz keine signifikanten Fehlklassifizierungen feststellen konnten. Wir empfehlen grundlegend Dateien von mindestens 10 Sekunden zu nutzen, die mindestens 3 Sekunden reinen Rauschens erhalten. Sollte kein Segment aus mindestens 512 Segmenten als reines Rauschen klassifiziert werden können, nehmen wir an, dass der Anfang der Datei reines Rauschen ist was zu schlechteren Ergebnissen führen kann. Die Klassifizierungsentscheidung ist aus den Plots erkennbar (s.~Abschnitt \ref{plots}), im Fall von zu wenig erkanntem reinem Rauschen wird außerdem eine entsprechende Warnung ausgegeben. Um eine realistische Schätzung des Umgebungsrauschens zu erhalten, empfehlen wir außerdem zu jedem Ort mit etwas Abstand Aufnahmen zu machen, um zeitlich schwankende Rauschkomponenten zu mitteln. Des Weiteren empfehlen wir die Nutzung eines einzigen Aufnahmegeräts ohne Lautstärkeadaption, da aktuell kein relativer Energievergleich zwischen den Frequenzen, sondern ausschließlich ein Absolutvergleich zum Einsatz kommt.
 
 \pagebreak
 \IMRADlabel{results}
@@ -210,10 +204,9 @@ Zu Raum 2 existieren außerdem auch eine Aufnahme des Mobiltelefons unter einer 
 
 \pagebreak
 \subsection{Plots}
+\label{plots}
 
-\label{noiseclassification}
-
-Zunächst wenden wir uns der Rauschextraktion zu. In Abbildung~\ref{fig:denoise} ist dieser Prozess dargestellt. Dabei ist zu beachten, dass das linkeste Diagramm im dargestellten Verlauf nicht genau der Differenz der ersten beiden entspricht, da hier zwischendurch noch die Multiband Spectral Substraction angewendet wurde, die wie bereits erwähnt zwar die Voice Leakage, damit aber auch das Energielevel reduziert. Im oberen Beispiel von Abbildung~\ref{fig:denoise} ist eine zu starke Entfernung von Sprachsignalen erkennbar, die zu „Löchern“ im Rauschen führt. Dieser Effekt war in unseren Tests jedoch nur selten sichtbar. Während im Originalton und im rauschreduzierten Signal jeweils klar Sprache sichtbar ist (ca. Sekunden 9-25), ist dies im reinen Rauschen rechts stark reduziert. Akustische Tests bestätigen, dass zwar keine vollständig präzise Eliminierung aller Sprache erreicht wurde, diese aber stark reduziert wurde und auch mit Lautstärke-Erhöhung kaum noch verständlich ist.
+Zunächst wenden wir uns der Rauschextraktion zu. In Abbildung~\ref{fig:denoise}\footnote{Für die Kombinierung mehrerer Plots in einer Grafik und die Bereitstellung der TU-Farben nutzen wir eine Bibliothek aus \cite{damken_fdamkenbachelors-thesis_code_2020}.} ist dieser Prozess dargestellt. Dabei ist zu beachten, dass das linkeste Diagramm im dargestellten Verlauf nicht genau der Differenz der ersten beiden entspricht, da hier zwischendurch noch die Multiband Spectral Substraction angewendet wurde, die wie bereits erwähnt zwar die Voice Leakage, damit aber auch das Energielevel reduziert. Im oberen Beispiel von Abbildung~\ref{fig:denoise} ist eine zu starke Entfernung von Sprachsignalen erkennbar, die zu „Löchern“ im Rauschen führt. Dieser Effekt war in unseren Tests jedoch nur selten sichtbar. Während im Originalton und im rauschreduzierten Signal jeweils klar Sprache sichtbar ist (ca. Sekunden 9-25), ist dies im reinen Rauschen rechts stark reduziert. Akustische Tests bestätigen, dass zwar keine vollständig präzise Eliminierung aller Sprache erreicht wurde, diese aber stark reduziert wurde und auch mit Lautstärke-Erhöhung kaum noch verständlich ist.
 
 \begin{figure}[h]
 	\centering
@@ -235,7 +228,7 @@ Als nächstes betrachten wir nun also die Rauschsignale verschiedener Aufnahmen 
 
 Schließlich wenden wir uns noch dem Vergleich der Umgebungs-Rauschapproximationen zu. Um die Umgebungen zu vergleichen, haben wir für jede dieser Umgebungen einen Vektor von Energie in verschiedenen Frequenzbändern (vgl. Abschnitt \ref{envdetect}). Dieser ist in Abbildung~\ref{fig:envs} für unsere Umgebungen dargestellt. Die Umgebung „Straße“ hebt sich hier schon durch hohe Intensität deutlich ab. „Platz“ und „Wald“ haben jeweils ein Maximum um $7\cdot10^3$~Hz, unterschieden sich aber auch im Verlauf in Richtung niedriger Frequenzen. Die drei verbleibenden und im gleichen Haus aufgenommenen Aufnahmen unterscheiden sich hingegen weniger deutlich. Hier zeichnen sich Schwierigkeiten bei der Klassifizierung der Aufnahmen ab.
 
-In allen Graphen ist ein starker Abfall der Intensitäten in hohen Frequenzen zu verzeichnen, der sowohl durch wenig akustischen Signalen in diesem Bereich als auch durch Schwächen des Aufnahmegerätes erklärbar ist. Außerdem haben alle Umgebungen einen starken punktuellen Anstieg bei etwa $1,5\cdot10^4$~Hz. Da dieser bei Referenzaufnahmen mit anderen Geräten nicht auftritt, ist dies sicherlich auf eine Schwäche des Aufnahmegeräts, beispielsweise durch eine Eigenfrequenz zurückzuführen.x
+In allen Graphen ist ein starker Abfall der Intensitäten in hohen Frequenzen zu verzeichnen, der sowohl durch wenig akustischen Signalen in diesem Bereich als auch durch Schwächen des Aufnahmegerätes erklärbar ist. Außerdem haben alle Umgebungen einen starken punktuellen Anstieg bei etwa $1,5\cdot10^4$~Hz. Da dieser bei Referenzaufnahmen mit anderen Geräten nicht auftritt, ist dies sicherlich auf eine Schwäche des Aufnahmegeräts, beispielsweise durch eine Eigenfrequenz zurückzuführen.
 
 \begin{figure}[h]
 	\centering
@@ -246,6 +239,7 @@ In allen Graphen ist ein starker Abfall der Intensitäten in hohen Frequenzen zu
 
 \pagebreak
 \subsection{Erkennung}
+
 
 gehen deshalb davon aus, dass die Ergebnisverfäschung durch die vorherige Median-Bildung gering ist.
 
