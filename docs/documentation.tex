@@ -78,16 +78,16 @@ sorting=anyt
 
 \maketitle
 
-\begin{abstract}
-	…
-\end{abstract}
+%\begin{abstract}
+%	…
+%\end{abstract}
+%
+%\begin{abstract}[english]
+%	…
+%\end{abstract}
 
-\begin{abstract}[english]
-	…
-\end{abstract}
 
-
-\pagebreak
+%\pagebreak
 \tableofcontents
 
 \pagebreak
@@ -132,7 +132,7 @@ Wir analysieren zunächst auf kleinen Fenstern das Vorhandensein von Sprache. Da
 
 Mithilfe des zuvor bestimmten größten Rauschintervalls führen wir nun eine Rauschreduzierung auf überlappenden Fenstern durch. Diese ist ähnlich zur Implementierung in Audacity. Dennoch funktionierte sie – vermutlich durch flexiblere Parametrisierung und die automatische Erkennung eines geeigneten Rauschintervalls – besser\footnote{Auch wenn es hier keine klare Metrik gibt, basiert diese Aussage auf einem akustischen Anhören der resultierenden Audiodateien und der Betrachtung von Zeit-Frequenz-Plots in denen die jeweiligen Energien durch Farben dargestellt werden. Jeweils kann das Verbleiben von Sprachfrequenzen subjektiv beurteilt werden.}. Eine erste Rauschapproximation erhalten wir nun durch Subtraktion des rauschreduzierten Signals vom Ursprungssignal.
 
-Um verbleibende Sprachanteile „Voice Leakage“ weiter zu reduzieren, folgen wir dem Ansatz von \cite{kamath_multi-band_2002}. Dort wird Multiband Spectral Substraction vorgestellt, durch den frquenzbandspezifisch Sprachanteile im Rauschen und zuvor zu stark reduziertes Rauschen ausgeglichen werden. Die Formeln lassen wir hier aus und verweisen auf das o.~g. Paper sowie den Quellcode. Unter Zuhilfenahme einer Matlab-Implementierung \cite{zavarehei_multi-band_nodate} haben wir eine funktionell an unsere Bedürfnisse angepasste Python-Implementierung erstellt. Diese nutzt in unserer angepassten Version die zuvor erkannten Intervalle reinen Rauschens als Grundlage. Hierbei mussten wir zwar einen deutlichen Abfall der Gesamtenergie und damit einen potenziellen Präzisionsverlust verzeichnen, erhielten aber nach o.~g. Kriterien auch sprachfreiere Ergebnisse.
+Um verbleibende Sprachanteile „Voice Leakage“ weiter zu reduzieren, folgen wir dem Ansatz von \cite{kamath_multi-band_2002}. Dort wird Multiband Spectral Substraction vorgestellt, durch den frequenzbandspezifisch Sprachanteile im Rauschen und zuvor zu stark reduziertes Rauschen ausgeglichen werden. Die Formeln lassen wir hier aus und verweisen auf das o.~g. Paper sowie den Quellcode. Unter Zuhilfenahme einer Matlab-Implementierung \cite{zavarehei_multi-band_nodate} haben wir eine funktionell an unsere Bedürfnisse angepasste Python-Implementierung erstellt. Diese nutzt in unserer angepassten Version die zuvor erkannten Intervalle reinen Rauschens als Grundlage. Hierbei mussten wir zwar einen deutlichen Abfall der Gesamtenergie und damit einen potenziellen Präzisionsverlust verzeichnen, erhielten aber nach o.~g. Kriterien auch sprachfreiere Ergebnisse.
 
 Zu beachten ist, dass auch in der Implementierung der Multiband Spectral Substraction ein Voice Activity Detector~(VAD) zwecks Sprachklassifizierung zum Einsatz kommt. Im Gegensatz zum zuvor erwähnten, basiert dieser jedoch darauf bereits ein kurzes Intervall reinen Rauschens als Grundlage zu haben und bekommt somit bei uns auch das längste Rauschintervall aus der Klassifizierung vor der ersten Rauschreduzierung.
 
@@ -173,7 +173,7 @@ auf die Differenzen
 % TODO sacred hier oder bei Bedienung
 
 \subsection{Empfehlungen}
-Aktuell akzeptiert die Implementierung ausschließlich WAV-Dateien. Diese können mit verschiedenen Frequenzen erstellt werden, bei Stereo-Dateien geschieht die Analyse derzeit ausschließlich auf der linken Audio-Spur. Aufgrund der Implementierungen genutzter Frameworks gibt es zwar feste Frequenzen, auf denen die Klassifierung von Segementen als reines Rauschen oder Sprache funktioniert, unsere Software approximiert an dieser Stelle jedoch durch die ähnlichste unterstützte Frequenz, wodurch wir auch beispielsweise auf 44,1 kHz keine signifikanten Fehlklassifizierungen feststellen konnten. Wir empfehlen grundlegend Dateien von mindestens 10 Sekunden zu nutzen, die mindestens 3 Sekunden reinen Rauschens erhalten. Sollte kein Segment aus mindestens 512 Segmenten als reines Rauschen klassifiziert werden können, nehmen wir an, dass der Anfang der Datei reines Rauschen ist was zu schlechteren Ergebnissen führen kann. Die Klassifizierungsentscheidung ist aus den Plots erkennbar (s.~Abschnitt \ref{plots}), im Fall von zu wenig erkanntem reinem Rauschen wird außerdem eine entsprechende Warnung ausgegeben. Um eine realistische Schätzung des Umgebungsrauschens zu erhalten, empfehlen wir außerdem zu jedem Ort mit etwas Abstand Aufnahmen zu machen, um zeitlich schwankende Rauschkomponenten zu mitteln. Des Weiteren empfehlen wir die Nutzung eines einzigen Aufnahmegeräts ohne Lautstärkeadaption, da aktuell kein relativer Energievergleich zwischen den Frequenzen, sondern ausschließlich ein Absolutvergleich zum Einsatz kommt.
+Aktuell akzeptiert die Implementierung ausschließlich WAV-Dateien. Diese können mit verschiedenen Frequenzen erstellt werden, bei Stereo-Dateien geschieht die Analyse derzeit ausschließlich auf der linken Audio-Spur. Aufgrund der Implementierungen genutzter Frameworks gibt es zwar feste Frequenzen, auf denen die Klassifierung von Segmenten als reines Rauschen oder Sprache funktioniert, unsere Software approximiert an dieser Stelle jedoch durch die ähnlichste unterstützte Frequenz, wodurch wir auch beispielsweise auf 44,1 kHz keine signifikanten Fehlklassifizierungen feststellen konnten. Wir empfehlen grundlegend Dateien von mindestens 10 Sekunden zu nutzen, die mindestens 3 Sekunden reinen Rauschens erhalten. Sollte kein Segment aus mindestens 512 Segmenten als reines Rauschen klassifiziert werden können, nehmen wir an, dass der Anfang der Datei reines Rauschen ist was zu schlechteren Ergebnissen führen kann. Die Klassifizierungsentscheidung ist aus den Plots erkennbar (s.~Abschnitt \ref{plots}), im Fall von zu wenig erkanntem reinem Rauschen wird außerdem eine entsprechende Warnung ausgegeben. Um eine realistische Schätzung des Umgebungsrauschens zu erhalten, empfehlen wir außerdem zu jedem Ort mit etwas Abstand Aufnahmen zu machen, um zeitlich schwankende Rauschkomponenten zu mitteln. Des Weiteren empfehlen wir die Nutzung eines einzigen Aufnahmegeräts ohne Lautstärkeadaption, da aktuell kein relativer Energievergleich zwischen den Frequenzen, sondern ausschließlich ein Absolutvergleich zum Einsatz kommt.
 
 \pagebreak
 \IMRADlabel{results}
@@ -183,6 +183,7 @@ Aktuell akzeptiert die Implementierung ausschließlich WAV-Dateien. Diese könne
 Hier beschreiben und zeigen wir die Resultate unserer Tests. Zum Erhalten der Rohdaten, Audiodateien und Bilder, siehe Abschnitt~\ref{usage}.
 
 \subsection{Umgebungen}
+\label{envs}
 
 Um die Software zu testen, haben wir zunächst mehrere Aufnahmen an verschiedenen Orten erstellt. Dabei haben wir darauf geachtet sowohl diverse als auch sehr ähnliche Umgebungen vertreten zu haben. Die Umgebungen sind die folgenden:
 %\vspace{-0.2cm}
@@ -228,54 +229,85 @@ Als nächstes betrachten wir nun also die Rauschsignale verschiedener Aufnahmen 
 
 Schließlich wenden wir uns noch dem Vergleich der Umgebungs-Rauschapproximationen zu. Um die Umgebungen zu vergleichen, haben wir für jede dieser Umgebungen einen Vektor von Energie in verschiedenen Frequenzbändern (vgl. Abschnitt \ref{envdetect}). Dieser ist in Abbildung~\ref{fig:envs} für unsere Umgebungen dargestellt. Die Umgebung „Straße“ hebt sich hier schon durch hohe Intensität deutlich ab. „Platz“ und „Wald“ haben jeweils ein Maximum um $7\cdot10^3$~Hz, unterschieden sich aber auch im Verlauf in Richtung niedriger Frequenzen. Die drei verbleibenden und im gleichen Haus aufgenommenen Aufnahmen unterscheiden sich hingegen weniger deutlich. Hier zeichnen sich Schwierigkeiten bei der Klassifizierung der Aufnahmen ab.
 
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.45\textwidth]{media/envs}
+	\caption{Darstellung der Rauschapproximationen verschiedener Umgebungen (eine Farbe pro Umgebung). Es handelt sich um einen Frequenz-Intensitätsplot. Die Multiband Spectral Substraction war hier deaktiviert, die Unterschiede zu aktivierter Multiband Spectral Substraction sind nicht groß. Auf der x-Achse sind Herz aufgetragen.}
+	\label{fig:envs}
+\end{figure}
+
 In allen Graphen ist ein starker Abfall der Intensitäten in hohen Frequenzen zu verzeichnen, der sowohl durch wenig akustischen Signalen in diesem Bereich als auch durch Schwächen des Aufnahmegerätes erklärbar ist. Außerdem haben alle Umgebungen einen starken punktuellen Anstieg bei etwa $1,5\cdot10^4$~Hz. Da dieser bei Referenzaufnahmen mit anderen Geräten nicht auftritt, ist dies sicherlich auf eine Schwäche des Aufnahmegeräts, beispielsweise durch eine Eigenfrequenz zurückzuführen.
+
+Bei Betrachtung der Unterschiede zwischen den einzelnen Aufnahmen einer Umgebung (Abbildung~\ref{fig:envs2}) stellen wir fest, dass auch hier Unterschiede erkennbar sind, diese jedoch in den meisten Fällen geringer ausfallen, als die zwischen den Umgebungen. Eine Unterscheidung der Räume und des Treppenhauses scheint weiterhin schwierig, da die Abweichungen zwischen diesen Abweichungen die Differenzen aus Abbildung~\ref{fig:envs} zu übersteigen scheinen.
 
 \begin{figure}[h]
 	\centering
-	\includegraphics[width=0.6\textwidth]{media/envs}
-	\caption{Darstellung der Rauschapproximationen verschiedener Umgebungen (eine Farbe pro Umgebung). Es handelt sich um einen Frequenz-Intensitätsplots. Die Multiband Spectral Substraction war hier deaktiviert, die Unterschiede zu aktivierter Multiband Spectral Substraction sind nicht groß. Auf der x-Achse sind Herz aufgetragen.}
-	\label{fig:envs}
+	\includegraphics[width=0.75\textwidth]{media/envs2}
+	\caption{Darstellung der Rauschapproximationen der einzelnen Aufnahmen der Umgebungen (eine Farbe pro Aufnahme). Es handelt sich um Frequenz-Intensitätsplots. Auf den x-Achsen sind Herz aufgetragen.}
+	\label{fig:envs2}
 \end{figure}
+
+
 
 \pagebreak
 \subsection{Erkennung}
 
+Zum Test der Umgebungserkennung haben wir die aus den Umgebungen aus Abschnitt \ref{envs} generierten Rauschapproximationen erstellt. Zunächst versuchen wir nun die einzelnen dieser Aufnahmen dieser wieder zuzuordnen\footnote{Hierbei sind die zuzuordnenden Testdaten auch in der Umgebungsgenerierung genutzt worden. Durch die vorherige Median-Bildung über die Werte aller Fenster in allen dort aufgenommenen Aufnahmen, gehen wir jedoch davon aus, dass die Ergebnisverfälschung dadurch gering ist. Tests bei denen nur auf den anderen Aufnahmen des Ortes die Umgebung generiert wurde oder neue Aufnahmen zugeordnet wurden, führten zu ähnlichen Ergebnissen.}. Die Ergebnisse unterscheiden sich mit den verschiedenen in Abschnitt~\ref{envdetect} beschriebenen Parametern, zwei gute Ergebnisse sind in Abbildung~\ref{fig:vals1} dargestellt. Im linken Beisiel wurden einige Umgebungen richtig erkannt. Vor allem wurden jedoch einige in „Raum 1“ aufgenommene Aufnahmen zu „Raum 2“ zugeordnet was aufgrund der ähnlichen Eigenschaften der Räume wenig überraschend ist. Im rechten Beispiel funktioniert die Klassifizierung der beiden Räume etwas besser, dafür gibt es im Treppenhaus einige Fehlklassifizierungen. Die verschiedenen Parameter erzielen an verschiedenen Stellen also unterschiedlich gute Ergebnisse. Bei Fehlklassifizierungen sind die richtigen Umgebungen jedoch meist noch grün was eine immer noch geringe Abweichung (also kleine Zahl) darstellt.
 
-gehen deshalb davon aus, dass die Ergebnisverfäschung durch die vorherige Median-Bildung gering ist.
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=1.0\textwidth]{media/vals2}
+	\caption{Ergebnis der Umgebungserkennung auf den verschiedenen Audiodateien. Links wurden die Standardparamter aus Abschnitt~\ref{envdetect} genutzt, rechts wurde eine lineare Abweichungsberechnung und eine logarithmische y-Skalierung genutzt. Pro Zeile sind jeweils die Werte einer Aufnahme angegeben, die Umgebung der folgenden 5 Aufnahmen ist jeweils über den Blöcken angegeben. In den Spalten sind jeweils die Abweichungswerte zu den einzelnen Umgebungen dargestellt, die Umgebungen sind hier in der gleichen Reihenfolge wie der der Blöcke dargestellt. Kleine Zahlen entsprechen einer höheren Wahrscheinlichkeit, dass diese Umgebung die der Aufnahme war, die wahrscheinlichste Umgebung ist jeweils eingerahmt. Optimal wären die eingerahmten Einträge im $n$-ten Block in der $n$-ten Spalte.}
+	\label{fig:vals1}
+\end{figure}
 
-Wir haben in sechs Umgebungen je mindestens fünf Aufnahmen mit mindestens einem Gerät gemacht. Die Umgebungen sind die folgenden:
-* Raum 1
-* Raum 2 (ähnliche Größe, gleiches Haus)
-* Treppenhaus (gleiches Haus, Fenster geöffnet)
-* Bundesstraße
-* Wald
-* Windiger Platz
+Um die Störabweichung zu untersuchen haben wir in „Raum 2“ jeweils zwei Aufnahmen mit unter der Bettdecke liegendem Mobiltelefon, bei geöffneten Fenster und mit den alten Bedingungen gemacht. Die Rauschapproximation der Umgebung basiert weiterhin auf den alten Aufnahmen. Die Ergebnisse sind in Abbildung~\ref{fig:vals2} dargestellt. Dabei wurde die Aufnahmen unter der Bettdecke und die unter den alten Bedingungen korrekt zugeordnet. Bei geöffnetem Fesnter wurden die Aufnahmen der Umgebung „Treppenhaus“ zugeordnet. Da diese jedoch bei geöffnetem Fenster im gleichen Gebäude aufgenommen wurde, ist dieses Resultat jedoch nicht überraschend.x
 
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.5\textwidth]{media/vals1}
+	\caption{Ergebnis der Umgebungserkennung auf den verschiedenen Audiodateien. Pro Zeile sind jeweils die Werte einer Aufnahme angegeben, die Eigenschaften der folgenden 2 Aufnahmen ist jeweils über den Blöcken angegeben. In den Spalten sind jeweils die Abweichungswerte zu den einzelnen Umgebungen dargestellt, die Umgebungen sind hier wie in Abbildung~\ref{fig:vals1}. Kleine Zahlen entsprechen einer höheren Wahrscheinlichkeit, dass diese Umgebung die der Aufnahme war, die wahrscheinlichste Umgebung ist jeweils eingerahmt. Optimal wären eingerahmte Einträge in der $4$-ten Spalte („Raum 2“).}
+	\label{fig:vals2}
+\end{figure}
 
-unter Decke/Fenster auf
 
 \IMRADlabel{discussion}
-
-
 \subsection{Bewertung}
 
-vgl. anderes Paper
+Unsere Rauschextraktion macht es für menschliche Hörer*innen meist schwer noch Teile der Sprache zu verstehen bzw. erfordert dazu eine deutliche Verstärkung des Signals. Subjektiv wirkt die Rauschentfernung ohne aufwändige Konfiguration besser als die beispielsweise in Audacity \cite{audacity_audacity_nodate} implementierte was an flexiblerer Implementierung der genutzten Funktionen und der automatischen Detektion eines geeigneten Rauschintervalls liegen könnte. Die Multiband Spectral Substraction führte zu weniger Voice Leakage, reduzierte aber auch die Gesamtenergie – insgesamt funktionierten die weiteren Funkionen unserer Software nach Anwendung von Multiband Spectral Substraction nicht wesentlich besser.
+
+Die Erkennung der Umgebungen funktioniert mit den meisten Paramtern recht zuverlässig auf sehr unterschiedlichen umgebungen, bei ähnlichen Umgebungen wie etwa den beiden benachbarten Räumen funktioniert sie teils nicht mehr oder nur mit wenigen Paramtern.
+
+Der Vergleich mit \cite{ikram_digital_2010} fällt schwer, da nach Rauschunterdrückung zwar ähnliche Plots zu Abbildung \ref{fig:denoise} angegeben werden, uns jedoch keine Audiodaten vorliegen. Aus den Plots gehen wir davon aus, dass die Ergebnisse unserer ähnlichen Rauschentfernungsansätze ähnlich gut sind. Die Umgebunserkennung ist schon bei leicht unterschiedlichen Aufnahmen kaum noch vergleichbar was eine Beurteilung der Unterschiede schwierig macht. Die Detektion von Manipulationen innerhalb einzelner Dateien ist bei uns derzeit nicht implementiert, siehe Abschnitt~\ref{manipulationdet}.
+
+
 
 \pagebreak
 \section{Future Work}
 \label{future}
-GaussSamplen
 
-Häufigkeit von Autos
+Hier werden ein paar Ideen zur Erweiterung und Verbesserung unserer Software kurz vorgestellt, die über den Rahmen dieses Praktikums hinausgehen.
 
-Mean für Manipulation
+\paragraph{Zeitliche Änderungen}
+Viele Geräusche treten nicht dauerhaft sondern immer wieder kurz auf, beispielsweise vorbeifahrende Autos auf einer Bundesstraße. Diese werden durch die aktuelle Median-Bildung über den zeitlichen verlauf nicht optimal abgebildet und könnten durch neue Ansätze besser in die Erkennung einbezogen werden.
 
-verschiedene Aufnahmegeräte
+\paragraph{Verschiedene Aufnahmegeräte}
+Um Auswirkungen verschiedener Aufnahmegeräte besser analysieren zu können, müsste zunächst ein insgesamt niedrigeres Energielevel einer Aufnahme ausgeglichen werden, um nur relative Unterschiede zwischen den Frequenzbändern zu betrachten. Anschließend könnten durch weitere Maßnahmen mehr Verbesserungen zum Ausgleich aufnahmegerätabhängiger Effekte ergriffen werden, etwa ein Ausgleich der in Abbildung~\ref{fig:envs} festgestellten lokalen Ausreißer bei $1,5\cdot10^4$~Hz.
 
-Grenzwert
+\paragraph{Grenzwert}
+Die aktuelle Implementierung sucht nach der bestpassendsten aus mehreren bekannten Umgebungen. Wünschenswert wäre ein Plausibilitätswert für eine Umgebung, der von anderen Umgebungen unabhängig ist. Aktuell wäre ein solcher Wert stark von den Parametern abhängig, funktioniert aber auch nur begrenzt. Insgesamt ist hierzu vermutlich eine weitere Verfeinerung der Metrik mit neuen Ansätzen nötig.
 
-\subsection{Manipulationserkennung}
+\paragraph{Wahrscheinlichkeiten}
+Beispielsweise um Grenzwerte zu realisieren, hätten wir gerne eine Wahrscheinlichkeitsverteilung, um Konfidenzintervalle anzugeben, in denen wir eine Aufnahme einer Umgebung zuordnen. Da wir durch die einzelnen Fenster viele Werte haben wie stark die einzelnen Frequenzen in einer Aufnahme enthalten sind, könnten wir diese als eine Gauß-Klocke pro Frequenz approximieren und anschließend Aufnahmen durch die Positionen in diesen Gauß-Klocken zuordnen. Da dieser Ansatz jedoch zunächst alle Frequenz-Intensitäten als unabhängig ansehen würde, müsste dieser mathematisch noch weiter entwickelt werden, um ihn einsatzbereit zu machen.
+
+\paragraph{Manipulationserkennung}
 \label{manipulationdet}
+
+Neben der Abschätzung, ob eine Umgebung zu einer Aufnahme plausibel ist oder der Zuordnung von Aufnahmen zu Umgebungen ist auch die Erkennung von Schnitten bzw. Manipulationen in Aufnahmen auf Basis von rauschen forensisch interessant. Für diese sind mehrere Ansätze denkbar.
+
+\cite{ikram_digital_2010} untersucht die Ähnlichkeit von Gesamtaufnahmen zu verschiedenen Umgebungen und vermutet bei mehreren ähnlichen Umgebungen, dass Anteile beider Umgebungen enthalten sind. Dazu ist es in unserer Implementierung vermutlich nötig den Median über die Frequenzen der Fenster der Aufnahme durch einen Mittelwert zu ersetzen, um nicht kurze starke Abweichungen direkt zu eliminieren. Der Ansatz hat jedoch die Nachteile, dass die potenzielle Umgebung einer Manipulation bekannt sein muss und die Tests funktionierten nachdem dort recht große Anteile hineinkopiert wurden. Bei kurzen manipulierten Stellen, könnte das deutlich schlechter funktionieren.
+
+Ein weiterer Ansatz wäre starke Abweichungen zwischen verschiedenen, kurzen Fenster zu untersuchen und Manipulationen zu vermuten, wenn ein oder mehrere benachbarte Fenster stark von den übrigen Fenstern abweichen. Dieser Ansatz könnte jedoch auch bei verbleibender Voice Leakage, also übrigen Sprachanteilen oder zu stark reduzierter Sprache eine Manipulation vermuten.
 
 \pagebreak
 
