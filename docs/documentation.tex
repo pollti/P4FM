@@ -98,11 +98,13 @@ Hier werden wir kurz in die Thematik einführen und einen Überblick über die T
 \subsection{Einführung}
 In der Forensik ist es wichtig Manipulationen in Audiodaten erkennen zu können, um etwa Beweismittel auf ihre Plausibilität prüfen zu können. Darüber hinaus ist es sehr hilfreich prüfen zu können, ob Aufnahmen an einer bestimmten Stelle aufgenommen sein könnten. Dadurch ist es möglich qualitativ unzureichend gefälschte Aufnahmen zu erkennen.
 
-Neben vielen weiteren Ansätzen wie etwa Hall oder ENF-Muster kann hierzu das spezifische Rauschen eines Ortes genutzt werden. Dieses unterscheidet sich je nach Umgebung und enthält hohe Anteile unterschiedlicher Frequenzen, die verglichen werden können. Durch Schnelle Fourier-Transformation (FFT) kann man diese aus Rauschsignalen berechnen und darauf Vergleiche ausführen.
+Neben vielen weiteren Ansätzen wie etwa Hall oder ENF-Muster kann hierzu das spezifische Rauschen eines Ortes genutzt werden. Dieses unterscheidet sich je nach Umgebung und enthält hohe Anteile unterschiedlicher Frequenzen, die verglichen werden können.
 
 \subsection{Ansatz}
 
 Unser Ansatz basiert auf dem Paper von Ikram und Malik \cite{ikram_digital_2010}. Unser Ziel ist es durch Betrachtung des Rauschens einer Audiodatei zu beurteilen, ob diese an bestimmten Orten aufgenommen wurde. Dies kann einerseits zur Plausibilitätsprüfung behaupteter Aufnahmeorte genutzt werden, ermöglicht andererseits mit Erweiterungen auch verschiedene Ansätze zur Erkennung, ob in einer Audiodatei Abschnitte aus anderen, an einem anderen Ort aufgenommenen, Aufnahmen eingefügt wurden. Dadurch wären viele Manipulationen erkennbar.
+
+Im Folgenden arbeiten wir meist im Frequenzraum, haben zunächst also eine Schnelle Fourier-Transformation (FFT) durchgeführt.
 
 Da die Erkennung von Orten und Manipulationen auf Aufnahmen funktionieren soll, in denen Sprache vorhanden ist, müssen wir diese Sprachelemente zunächst eliminieren bzw. reduzieren, um reines Rauschen vergleichen zu können. Dieses Rauschen kann zwar über den zeitlichen Verlauf weiterhin variieren (etwa durch vorbeifahrende Autos). Der Einfluss solcher Effekte kann allerdings durch verschiedene Parameter, wie etwa die Nutzung von Median/Mittelwert in verschiedenen Verarbeitungsschritten später beeinflusst werden. Um vorzubereiten, dass Manipulationen auch erkannt werden, wenn ausschließlich ein Sprachsegment, also ein Audioteil ohne reine Rauschsequenzen, inseriert wurden, kommt ein Herausschneiden aller Teile mit Sprache nicht infrage und wir müssen auch an diesen Stellen das reine Rauschen finden.
 
