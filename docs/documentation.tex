@@ -52,16 +52,16 @@ sorting=anyt
 
 %Zusätzliche Metadaten für PDF/A. In diesem Fall notwendig, weil Titel ein Makro enthält.
 \Metadata{
-	author={A. Stefanie Blümer, Tim Pollandt},
+	author={Anna Stefanie Blümer, Tim Pollandt},
 	title={Umgebungserkennung aus Rauschen},
 	subject={Dokumentation zum Praktikum „Implementierung in Forensik und Mediensicherheit“},
-	date=2021-02-20,
+	date=2021-02-26,
 	keywords=TU Darmstadt \sep Praktikum \sep Fraunhofer \sep Forensik \sep Audio \sep Rauschen
 }
 
 \title{Umgebungserkennung aus Rauschen in Audiodaten}
 \subtitle{Dokumentation zum Praktikum „Implementierung in Forensik und Mediensicherheit“}
-\author{Stefanie Blümer, Tim Pollandt}
+\author{A. Stefanie Blümer, Tim Pollandt}
 
 \titleimage{
 %	%Folgende Box kann selbstverständlich durch ein mit \includegraphics geladenes Bild ersetzt werden.
@@ -96,15 +96,15 @@ sorting=anyt
 Hier werden wir kurz in die Thematik einführen und einen Überblick über die Teile des Projekts geben.
 
 \subsection{Einführung}
-In der Forensik ist es wichtig Manipulationen in Audiodaten erkennen zu können, um etwa Beweismittel auf ihre Plausibilität prüfen zu können. Darüber hinaus ist es sehr hilfreich prüfen zu können, ob Aufnahmen an einer bestimmten Stelle aufgenommen sein könnten, plausibel sind. Dadurch ist es möglich nicht in ausreichender Qualität gefälschte Aufnahmen zu erkennen.
+In der Forensik ist es wichtig Manipulationen in Audiodaten erkennen zu können, um etwa Beweismittel auf ihre Plausibilität prüfen zu können. Darüber hinaus ist es sehr hilfreich prüfen zu können, ob Aufnahmen an einer bestimmten Stelle aufgenommen sein könnten. Dadurch ist es möglich qualitativ unzureichend gefälschte Aufnahmen zu erkennen.
 
-Neben vielen weiteren Ansätzen wie etwa Hall oder ENF-Rauschen kann hierzu das spezifische Rauschen eines Ortes genutzt werden. Dieses unterscheidet sich je nach Umgebung und enthält hohe Anteile unterschiedlicher Frequenzen, die verglichen werden können. Durch Schnelle Fourier-Transformation (FFT) kann man diese aus Rauschsignalen berechnen und darauf Vergleiche ausführen.
+Neben vielen weiteren Ansätzen wie etwa Hall oder ENF-Muster kann hierzu das spezifische Rauschen eines Ortes genutzt werden. Dieses unterscheidet sich je nach Umgebung und enthält hohe Anteile unterschiedlicher Frequenzen, die verglichen werden können. Durch Schnelle Fourier-Transformation (FFT) kann man diese aus Rauschsignalen berechnen und darauf Vergleiche ausführen.
 
 \subsection{Ansatz}
 
-Unser Ansatz basiert auf dem Paper \cite{ikram_digital_2010}. Unser Ziel ist es durch Betrachtung des Rauschens einer Audiodatei zu beurteilen, ob diese an bestimmten Orten aufgenommen wurde. Dies kann einerseits zur Plausibilitätsprüfung behaupteter Aufnahmeorte genutzt werden, ermöglicht andererseits mit Erweiterungen auch verschiedene Ansätze zur Erkennung, ob in einer Audiodatei Abschnitte aus anderen, an einem anderen Ort aufgenommenen, Aufnahmen eingefügt wurden. Dadurch wären viele Manipulationen erkennbar.
+Unser Ansatz basiert auf dem Paper von Ikram und Malik \cite{ikram_digital_2010}. Unser Ziel ist es durch Betrachtung des Rauschens einer Audiodatei zu beurteilen, ob diese an bestimmten Orten aufgenommen wurde. Dies kann einerseits zur Plausibilitätsprüfung behaupteter Aufnahmeorte genutzt werden, ermöglicht andererseits mit Erweiterungen auch verschiedene Ansätze zur Erkennung, ob in einer Audiodatei Abschnitte aus anderen, an einem anderen Ort aufgenommenen, Aufnahmen eingefügt wurden. Dadurch wären viele Manipulationen erkennbar.
 
-Da die Erkennung von Orten und Manipulationen auf Aufnahmen funktionieren soll, in denen Rauschen vorhanden ist, müssen wir diese Sprachelemente zunächst eliminieren bzw. reduzieren, um reines Rauschen vergleichen zu können. Dieses Rauschen kann zwar über den zeitlichen Verlauf weiterhin variieren (etwa durch vorbeifahrende Autos). Der Einfluss solcher Effekte kann allerdings durch verschiedene Parameter, wie etwa die Nutzung von Median/Mittelwert in verschiedenen Verarbeitungsschritten später beeinflusst werden. Um vorzubereiten, dass Manipulationen auch erkannt werden, wenn ausschließlich ein Sprachsegment, also ein Audioteil ohne reine Rauschsequenzen, inseriert wurden, kommt ein Herausschneiden aller Teile mit Sprache nicht infrage und wir müssen auch an diesen Stellen das reine Rauschen finden.
+Da die Erkennung von Orten und Manipulationen auf Aufnahmen funktionieren soll, in denen Sprache vorhanden ist, müssen wir diese Sprachelemente zunächst eliminieren bzw. reduzieren, um reines Rauschen vergleichen zu können. Dieses Rauschen kann zwar über den zeitlichen Verlauf weiterhin variieren (etwa durch vorbeifahrende Autos). Der Einfluss solcher Effekte kann allerdings durch verschiedene Parameter, wie etwa die Nutzung von Median/Mittelwert in verschiedenen Verarbeitungsschritten später beeinflusst werden. Um vorzubereiten, dass Manipulationen auch erkannt werden, wenn ausschließlich ein Sprachsegment, also ein Audioteil ohne reine Rauschsequenzen, inseriert wurden, kommt ein Herausschneiden aller Teile mit Sprache nicht infrage und wir müssen auch an diesen Stellen das reine Rauschen finden.
 
 Dazu nutzen wir einen zweistufigen Ansatz in dem zunächst eine Standard-Rauschreduzierung durchgeführt wird. Durch Subtraktion dieses sprachreduzierten Signals erhalten wir eine erste Rauschapproximation. In einer weiteren Stufe reduzieren wir anschließend weiter sogenannte Voice Leakage, also verbliebene Einflüsse von Sprache. Mehr Details zur Rauschreduzierung folgen in Abschnitt \ref{noiseremove}.
 
@@ -216,9 +216,9 @@ Zunächst wenden wir uns der Rauschextraktion zu. In Abbildung~\ref{fig:denoise}
 	\label{fig:denoise}
 \end{figure}
 
-Um mehr Informationen über die erste Stufe der Rauschdetektion zu erhalten, ist in den linken Plots von Abbildung~\ref{fig:denoise} und allen Plots von Abbildung~\ref{fig:compare} die Klassifizierung in Sprache und reines Rauschen oben mit dünnen Stricken farblich dargestellt. Dabei stellt grün Sprachsequenzen, rot reines Rauschen und schwarz das längste, also zur weiteren Verarbeitung genutzte, Intervall reinen Rauschens dar. Mit kleinen Unterbrechungen entspricht dies weitgehend der intuitiven Klassifizierung anhand der akustischen Beurteilung und kann ansonsten auch in der Sensibilität angepasst werden. In der Umgebung „Platz“ sind die erkannten Rauschintervalle teils recht kurz, da durch starken Wind große Teile als Sprache klassifiziert wurden. In Tests mit einem anderen Aufnahmegerät funktionierte dies allerdings teils schlechter und klassifizierte zu oft als Sprache, was zu wenig reinen Rauschintervallen führte. Erklärt werden kann dies unter Umständen mit einem dort aktivierten Software-Rauschfilter, der zu unreinen Audiosignalen führte.
+Um mehr Informationen über die erste Stufe der Rauschdetektion zu erhalten, ist in den linken Plots von Abbildung~\ref{fig:denoise} und allen Plots von Abbildung~\ref{fig:compare} die Klassifizierung in Sprache und reines Rauschen oben mit dünnen Stricken farblich dargestellt. Dabei stellt grün Sprachsequenzen, rot reines Rauschen und schwarz das längste, also zur weiteren Verarbeitung genutzte, Intervall reinen Rauschens dar. Mit kleinen Unterbrechungen entspricht dies weitgehend der intuitiven Klassifizierung anhand der akustischen Beurteilung und kann ansonsten auch in der Sensibilität angepasst werden. In der Umgebung „Platz“ sind die erkannten Rauschintervalle teils recht kurz, da starker Wind teilweise als Sprache klassifiziert wurde. In Tests mit einem anderen Aufnahmegerät funktionierte die Zuordnung teils schlechter und klassifizierte zu oft als Sprache, was zu wenig reinen Rauschintervallen führte. Erklärt werden kann dies unter Umständen mit einem dort aktivierten Software-Rauschfilter, der zu unreinen Audiosignalen führte.
 
-Als nächstes betrachten wir nun also die Rauschsignale verschiedener Aufnahmen an verschiedenen Umgebungen in Abbildung~\ref{fig:compare}. Teilweise sind in diesen Plots in den Spalten stärkere Gemeinsamkeiten erkennbar, die für die spätere Klassifizierung vielversprechend sind. Teilweise wirken die Spalten allerdings auch sehr ähnlich und weisen auch innerhalb der Spalten Abweichungen auf. Wie zu erwarten, sind sich beispielsweise die Umgebungen „Raum~1“ und „Raum~2“ recht ähnlich. Akustisch sind diese ebenfalls nicht zu unterscheiden, die Umgebungen „Platz“ (durch starken Wind) und „Straße“ (durch lokalen Geräuschanstieg durch Autos) heben sich akustisch noch meist ab.
+Als nächstes betrachten wir nun also die Rauschsignale verschiedener Aufnahmen an verschiedenen Umgebungen in Abbildung~\ref{fig:compare}. Teilweise sind in diesen Plots in den Spalten stärkere Gemeinsamkeiten erkennbar, die für die spätere Klassifizierung vielversprechend sind. Teilweise wirken die Spektrogramme verschiedener Orte allerdings auch sehr ähnlich und weisen auch innerhalb der Spalten Abweichungen auf. Wie zu erwarten, sind sich beispielsweise die Umgebungen „Raum~1“ und „Raum~2“ recht ähnlich. Akustisch sind diese ebenfalls nicht zu unterscheiden, die Umgebungen „Platz“ (durch starken Wind) und „Straße“ (durch lokalen Geräuschanstieg durch Autos) heben sich akustisch noch meist ab.
 
 \begin{figure}[h]
 	\centering
@@ -252,7 +252,7 @@ Bei Betrachtung der Unterschiede zwischen den einzelnen Aufnahmen einer Umgebung
 \pagebreak
 \subsection{Erkennung}
 
-Zum Test der Umgebungserkennung haben wir die aus den Umgebungen aus Abschnitt \ref{envs} generierten Rauschapproximationen erstellt. Zunächst versuchen wir nun die einzelnen dieser Aufnahmen dieser wieder zuzuordnen\footnote{Hierbei sind die zuzuordnenden Testdaten auch in der Umgebungsgenerierung genutzt worden. Durch die vorherige Median-Bildung über die Werte aller Fenster in allen dort aufgenommenen Aufnahmen, gehen wir jedoch davon aus, dass die Ergebnisverfälschung dadurch gering ist. Tests bei denen nur auf den anderen Aufnahmen des Ortes die Umgebung generiert wurde oder neue Aufnahmen zugeordnet wurden, führten zu ähnlichen Ergebnissen.}. Die Ergebnisse unterscheiden sich mit den verschiedenen in Abschnitt~\ref{envdetect} beschriebenen Parametern, zwei gute Ergebnisse sind in Abbildung~\ref{fig:vals1} dargestellt. Im linken Beisiel wurden einige Umgebungen richtig erkannt. Vor allem wurden jedoch einige in „Raum 1“ aufgenommene Aufnahmen zu „Raum 2“ zugeordnet was aufgrund der ähnlichen Eigenschaften der Räume wenig überraschend ist. Im rechten Beispiel funktioniert die Klassifizierung der beiden Räume etwas besser, dafür gibt es im Treppenhaus einige Fehlklassifizierungen. Die verschiedenen Parameter erzielen an verschiedenen Stellen also unterschiedlich gute Ergebnisse. Bei Fehlklassifizierungen sind die richtigen Umgebungen jedoch meist noch grün was eine immer noch geringe Abweichung (also kleine Zahl) darstellt.
+Zum Test der Umgebungserkennung haben wir die aus den Umgebungen aus Abschnitt \ref{envs} generierten Rauschapproximationen erstellt. Zunächst versuchen wir nun die einzelnen dieser Aufnahmen den Umgebungen wieder zuzuordnen\footnote{Hierbei sind die zuzuordnenden Testdaten auch in der Umgebungsgenerierung genutzt worden. Durch die vorherige Median-Bildung über die Werte aller Fenster in allen dort aufgenommenen Aufnahmen, gehen wir jedoch davon aus, dass die Ergebnisverfälschung dadurch gering ist. Tests bei denen nur auf den anderen Aufnahmen des Ortes die Umgebung generiert wurde oder neue Aufnahmen zugeordnet wurden, führten zu ähnlichen Ergebnissen.}. Die Ergebnisse unterscheiden sich mit den verschiedenen in Abschnitt~\ref{envdetect} beschriebenen Parametern, zwei gute Ergebnisse sind in Abbildung~\ref{fig:vals1} dargestellt. Im linken Beisiel wurden einige Umgebungen richtig erkannt. Vor allem wurden jedoch einige in „Raum 1“ aufgenommene Aufnahmen zu „Raum 2“ zugeordnet was aufgrund der ähnlichen Eigenschaften der Räume wenig überraschend ist. Im rechten Beispiel funktioniert die Klassifizierung der beiden Räume etwas besser, dafür gibt es im Treppenhaus einige Fehlklassifizierungen. Die verschiedenen Parameter erzielen an verschiedenen Stellen also unterschiedlich gute Ergebnisse. Bei Fehlklassifizierungen sind die richtigen Umgebungen jedoch meist noch grün was eine immer noch geringe Abweichung (also kleine Zahl) darstellt.
 
 \begin{figure}[ht]
 	\centering
@@ -261,7 +261,7 @@ Zum Test der Umgebungserkennung haben wir die aus den Umgebungen aus Abschnitt \
 	\label{fig:vals1}
 \end{figure}
 
-Um die Störabweichung zu untersuchen haben wir in „Raum 2“ jeweils zwei Aufnahmen mit unter der Bettdecke liegendem Mobiltelefon, bei geöffneten Fenster und mit den alten Bedingungen gemacht. Die Rauschapproximation der Umgebung basiert weiterhin auf den alten Aufnahmen. Die Ergebnisse sind in Abbildung~\ref{fig:vals2} dargestellt. Dabei wurde die Aufnahmen unter der Bettdecke und die unter den alten Bedingungen korrekt zugeordnet. Bei geöffnetem Fesnter wurden die Aufnahmen der Umgebung „Treppenhaus“ zugeordnet. Da diese jedoch bei geöffnetem Fenster im gleichen Gebäude aufgenommen wurde, ist dieses Resultat jedoch nicht überraschend.x
+Um die Störabweichung zu untersuchen haben wir in „Raum 2“ jeweils zwei Aufnahmen mit unter der Bettdecke liegendem Mobiltelefon, bei geöffneten Fenster und mit den alten Bedingungen gemacht. Die Rauschapproximation der Umgebung basiert weiterhin auf den alten Aufnahmen. Die Ergebnisse sind in Abbildung~\ref{fig:vals2} dargestellt. Dabei wurde die Aufnahmen unter der Bettdecke und die unter den alten Bedingungen korrekt zugeordnet. Bei geöffnetem Fesnter wurden die Aufnahmen der Umgebung „Treppenhaus“ zugeordnet. Da diese jedoch bei geöffnetem Fenster im gleichen Gebäude aufgenommen wurde, ist dieses Resultat jedoch nicht überraschend.
 
 \begin{figure}[h]
 	\centering
@@ -272,7 +272,7 @@ Um die Störabweichung zu untersuchen haben wir in „Raum 2“ jeweils zwei Auf
 
 
 \IMRADlabel{discussion}
-\subsection{Bewertung}
+\subsection{Resümee}
 
 Unsere Rauschextraktion macht es für menschliche Hörer*innen meist schwer noch Teile der Sprache zu verstehen bzw. erfordert dazu eine deutliche Verstärkung des Signals. Subjektiv wirkt die Rauschentfernung ohne aufwändige Konfiguration besser als die beispielsweise in Audacity \cite{audacity_audacity_nodate} implementierte was an flexiblerer Implementierung der genutzten Funktionen und der automatischen Detektion eines geeigneten Rauschintervalls liegen könnte. Die Multiband Spectral Substraction führte zu weniger Voice Leakage, reduzierte aber auch die Gesamtenergie – insgesamt funktionierten die weiteren Funkionen unserer Software nach Anwendung von Multiband Spectral Substraction nicht wesentlich besser.
 
@@ -283,7 +283,7 @@ Der Vergleich mit \cite{ikram_digital_2010} fällt schwer, da nach Rauschunterdr
 
 
 \pagebreak
-\section{Future Work}
+\section{Mögliche Erweiterungen}
 \label{future}
 
 Hier werden ein paar Ideen zur Erweiterung und Verbesserung unserer Software kurz vorgestellt, die über den Rahmen dieses Praktikums hinausgehen.
