@@ -1,3 +1,6 @@
+# With the help of https://github.com/fdamken/bachelors-thesis_code/blob/cd69af4d1e385e6b91b3bc12bd97c60671857e30/investigation/plot_util.py
+# Permission granted by author.
+
 import math
 import os
 from typing import List, Tuple, Optional

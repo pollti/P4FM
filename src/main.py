@@ -1,7 +1,6 @@
+import tempfile
 from copy import deepcopy
 from typing import Tuple
-
-import sys
 
 import scipy as scp
 import scipy.signal
@@ -11,17 +10,20 @@ import matplotlib_tuda
 import noisereduce as nr
 import progressbar
 import webrtcvad
+from sacred.observers import FileStorageObserver
+
 import fourier_plot
 from matplotlib import pyplot as plt, ticker
 from matplotlib.contour import QuadContourSet
 
-from src.multiband_spectral_substraction import segment
+# from src.multiband_spectral_substraction import segment
 from src.plot_util import SubplotsAndSave
-from src.multiband_spectral_substraction import SSMultibandKamath02
+from src.multiband_spectral_substraction import multiband_substraction_denoise
 
 from sacred import Experiment
 
 ex = Experiment()
+ex.observers.append(FileStorageObserver("results"))
 
 matplotlib_tuda.load()
 np.set_printoptions(linewidth=2000)
@@ -35,10 +37,10 @@ def ex_config():
 
     path = "Audio/"  # The relative path to the recordings depends on working directory
     ending = ".wav"
-    recordings = {"Room1": ["Fabi01", "Fabi02", "Fabi03", "Fabi04", "Fabi05"],
-                  "Room2": ["Tim01", "Tim02", "Tim03", "Tim04", "Tim05"],
+    recordings = {"Raum1": ["Fabi01", "Fabi02", "Fabi03", "Fabi04", "Fabi05"],
+                  "Raum2": ["Tim01", "Tim02", "Tim03", "Tim04", "Tim05"],
                   "Platz": ["Platz01", "Platz02", "Platz03", "Platz04", "Platz05"],
-                  "Street": ["Street01", "Street02", "Street03", "Street04", "Street05"],
+                  "Strasse": ["Street01", "Street02", "Street03", "Street04", "Street05"],
                   "Treppe": ["Treppe01", "Treppe02", "Treppe03", "Treppe04", "Treppe05"],
                   "Wald": ["Wald01", "Wald02", "Wald03", "Wald04", "Wald05"]}  # filenames assigned to location
     recordings_to_be_assigned = deepcopy(
@@ -47,6 +49,14 @@ def ex_config():
     environments = None
     recordings_noise_only = None
     recordings_to_be_assigned_noise_only = None
+    activate_multipass = False
+    multipass_audio_files = activate_multipass
+    # graphs
+    show_graphs_denoising = [True, True, True]
+    filename_graph_denoising = "file_denoising_steps"
+    denoising_graph_multipass = activate_multipass
+    filename_graph_comparing = "compare_denoised_files"
+    comparing_graph_multipass = activate_multipass
 
 
 def get_speech_postions(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, int]:
@@ -108,14 +118,17 @@ def get_largest_noise_interval(intervals: np.ndarray) -> Tuple[int, int]:
     :returns: starting point of largest interval
     :returns: end point of largest interval
     """
+    minnoise = 512  # minimal noise interval must be specified here to avoid crashes
     largest_size = 0
     start = 0
-    end = 0  # TODO: minimal noise interval must be specified here to avoid crashes!
+    end = minnoise
     for a, b in intervals:
         if b - a > largest_size:
             start = a
             end = b
             largest_size = b - a
+    if end - start <= minnoise:
+        print("Warning: no long pure noise interval found. Assuming first milliseconds to be pure noise. Results may be highly imprecise.")
     return start, end
 
 
@@ -136,22 +149,24 @@ def denoise_audio(signal: np.ndarray, rate: int, including_multipass: bool = Tru
     # perform noise reduction
     reduced_noise = nr.reduce_noise(audio_clip=signal.astype(np.float16), noise_clip=noisy_part.astype(np.float16), verbose=False).astype(np.int16)
     noise_signal = signal - reduced_noise
+    # Call multipass if needed
     if including_multipass:
-        voice_leakage = SSMultibandKamath02(noise_signal, rate, a, b)
+        voice_leakage = multiband_substraction_denoise(noise_signal, rate, a, b)
         noise_signal = noise_signal[:voice_leakage.size] - voice_leakage
     return reduced_noise, noise_signal, intervals, a, b
 
 
-def read_audio(path: str) -> Tuple[np.ndarray, np.ndarray, int]:
+@ex.capture
+def read_audio(path_and_name: str, ending: str) -> Tuple[np.ndarray, np.ndarray, int]:
     """
-    :TODO: make it work with different stereo signals
-    Reads Wave-Files 
+    Reads Wave-Files.
     :param path: path to file from working directory folder, without the .wav ending
+    :param ending: file format ending like ".wav"
     :returns: shape:(T,) all the sampled times as floats
     :returns: shape:(S,) the samples of the left stereoline as int16 values
     :returns: samplerate as float
     """
-    rate, data = scipy.io.wavfile.read(f'{path}.wav')
+    rate, data = scipy.io.wavfile.read(f'{path_and_name}{ending}')
     time_step = 1 / rate
     time_vec = np.arange(0, data.shape[0]) * time_step
     if len(data.shape) == 2:
@@ -161,8 +176,7 @@ def read_audio(path: str) -> Tuple[np.ndarray, np.ndarray, int]:
 
 def generate_exemplary_audio() -> Tuple[np.ndarray, np.ndarray, float]:
     """
-    :TODO: make it work with stereo/mono
-    :TODO: take params for signalfunctions
+    :TODO: take params for signal functions for debugging purposes (currently hardcoded)
     Generates exemplary audio signal
     :returns: shape:(T,) all the sampled times as floats
     :returns: shape:(S,) the samples of the left stereoline as int16 values
@@ -217,148 +231,221 @@ def plot_spectrogram(signal: np.ndarray, rate: float, caption: str, ax, show_xla
     return c
 
 
-def main_plot_file(filenames, graphname: str, show_graph):  # TODO: crashes with only one file as parameter
+@ex.capture
+def plot_denoise(filenames: np.ndarray, filename_graph_denoising: str, show_graphs_denoising, denoising_graph_multipass: bool, path: str):
     """
     Generates required files (denoised, noise) and plots spectrograms.
     :param filenames: files to process as list. Files are rows.
-    :param graphname: name of the saved plot file
-    :param show_graph: list of plots and files to generate as booleans. [orig, denoised, noise]
-    :return:
+    :param filename_graph_denoising: name of the saved plot file
+    :param show_graphs_denoising: list of plots and files to generate as booleans. [orig, denoised, noise]
+    :param denoising_graph_multipass: Apply multipass approach for better denoising.
+    :param path: path to audio files.
     """
     print('Generating plots for specified files. This may take a while.')
-    plottypes = show_graph.count(True)
-    with SubplotsAndSave('res', graphname, nrows=len(filenames), ncols=plottypes + 1, sharey='all', file_types=['png']) as (fig, axs):
-        bar = progressbar.ProgressBar(widgets=['Creating plot: ', progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()],
-                                      maxval=plottypes * len(filenames)).start()
-        for i, filename in enumerate(filenames):
-            time_vec, signal, rate = read_audio(filename)  # generate_exemplary_audio()
-            #### START debugging shortener
-            fact = 1
-            end = rate
-            signal = signal[::fact]
-            time_vec = time_vec[::fact]
-            rate = int(rate / fact)
-            #### END debugging shortener
+    plottypes = show_graphs_denoising.count(True)
+    if plottypes < 1:
+        print("Warning: No plots selected for denoising information. Quitting plotting.")
+        return
+    # ncols + 1 for scala space. This generates an empty plot, but is the best solution for now.
+    # CAUTION: if removed null pointers may occur later in axs[show_graph[:1].count(True)]
+    with tempfile.TemporaryDirectory() as dirpath:
+        with SubplotsAndSave(dirpath, filename_graph_denoising, nrows=len(filenames), ncols=plottypes + 1, sharey='all', file_types=['png']) as (fig, axs):
+            bar = progressbar.ProgressBar(widgets=['Creating plot: ', progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()],
+                                          maxval=plottypes * len(filenames)).start()
+            for i, filename in enumerate(filenames):
+                time_vec, signal, rate = read_audio(path + filename)  # generate_exemplary_audio()
+                #### START debugging shortener - ignore if not debugging. Used to reduce signal length for faster testing.
+                # fact = 1
+                # end = rate
+                # signal = signal[::fact]
+                # time_vec = time_vec[::fact]
+                # rate = int(rate / fact)
+                #### END debugging shortener
 
-            if show_graph[0]:
-                # plot_signal(time_vec, signal, filename)
-                ax = axs[i, 0]
-                c = plot_spectrogram(signal, rate, 'original', ax, i == plottypes - 1, True, i == 0)
+                # if only one file, axs is one-dimensional
+                if axs.ndim > 1:
+                    axs_i = [axs[i, 0], axs[i, + show_graphs_denoising[:1].count(True)], axs[i, + show_graphs_denoising[:2].count(True)]]
+                else:
+                    axs_i = [axs[0], axs[show_graphs_denoising[:1].count(True)], axs[show_graphs_denoising[:2].count(True)]]
 
-                # Noise and speach lines at plot top.
-                line_y = 9980
+                # Original audio including detected intervals for pure/ no noise
+                if show_graphs_denoising[0]:
+                    # plot_signal(time_vec, signal, filename)
+                    ax = axs_i[0]
+                    c = plot_spectrogram(signal, rate, 'original', ax, i == plottypes - 1, True, i == 0)
 
-                intervals = get_noise_intervals(signal, rate)
-                a, b = get_largest_noise_interval(intervals)
+                    # Noise and speach lines at plot top.
+                    line_y = 9980
 
-                for k, (interval_start, interval_end) in enumerate(intervals):
-                    # Assume no noise from beginning of time.
-                    if k == 0:
-                        ax.plot((time_vec[0], time_vec[interval_start]), (line_y, line_y), color='tuda:green', zorder=10)
-                    # Assume no noise between intervals.
-                    if k > 0:
-                        ax.plot((time_vec[intervals[k - 1][1]], time_vec[interval_start]), (line_y, line_y), color='tuda:green', zorder=100)
-                    # Assume no noise to end of time.
-                    if k == intervals.shape[0] - 1:
-                        ax.plot((time_vec[interval_end], time_vec[-1]), (line_y, line_y), color='tuda:green', zorder=10)
-                    ax.plot((time_vec[interval_start], time_vec[interval_end]), (line_y, line_y), color='tuda:red', zorder=100)
-                ax.plot((time_vec[b], time_vec[a]), (line_y, line_y), color='black', zorder=100)
-                # verticalines if needed
-                # for interval in intervals:
-                #    ax.axvline(interval[0] / rate, color='tuda:green', ls='dotted')
-                #    ax.axvline(interval[1] / rate, color='tuda:red', ls='dashed')
+                    intervals = get_noise_intervals(signal, rate)
+                    a, b = get_largest_noise_interval(intervals)
 
-                bar.update(i * plottypes + 1)
+                    # Colorize intervals of pe noise / speech.
+                    for k, (interval_start, interval_end) in enumerate(intervals):
+                        # Assume no noise from beginning of time.
+                        if k == 0:
+                            ax.plot((time_vec[0], time_vec[interval_start]), (line_y, line_y), color='tuda:green', zorder=10)
+                        # Assume no noise between intervals.
+                        if k > 0:
+                            ax.plot((time_vec[intervals[k - 1][1]], time_vec[interval_start]), (line_y, line_y), color='tuda:green', zorder=100)
+                        # Assume no noise to end of time.
+                        if k == intervals.shape[0] - 1:
+                            ax.plot((time_vec[interval_end], time_vec[-1]), (line_y, line_y), color='tuda:green', zorder=10)
+                        ax.plot((time_vec[interval_start], time_vec[interval_end]), (line_y, line_y), color='tuda:red', zorder=100)
+                    ax.plot((time_vec[b], time_vec[a]), (line_y, line_y), color='black', zorder=100)
 
-            if show_graph[0] or show_graph[1]:
-                denoised_signal, noise_signal, _, _, _ = denoise_audio(signal, rate)
+                    bar.update(i * plottypes + 1)
 
-            if show_graph[1]:
-                scipy.io.wavfile.write(f'media/{filename}_denoised_generated.wav', rate, denoised_signal)
-                # plot_signal(time_vec, denoised_signal, filename + '_den')
-                c = plot_spectrogram(denoised_signal, rate, 'denoised', axs[i, + show_graph[:1].count(True)], i == plottypes - 1, not show_graph[0], i == 0)
-                bar.update(i * plottypes + show_graph[:1].count(True) + 1)
+                # Generate denoised signal if needed.
+                if show_graphs_denoising[1] or show_graphs_denoising[2]:
+                    denoised_signal, noise_signal, _, _, _ = denoise_audio(signal, rate, including_multipass=denoising_graph_multipass)
 
-            if show_graph[2]:
-                scipy.io.wavfile.write(f'media/{filename}_noiseonly_generated.wav', rate, noise_signal)
-                # plot_signal(time_vec, noise_signal, filename + '_noise')
-                c = plot_spectrogram(noise_signal, rate, 'noise', axs[i, + show_graph[:2].count(True)], i == plottypes - 1, not (show_graph[0] | show_graph[1]), i == 0)
-                bar.update(i * plottypes + show_graph[:2].count(True) + 1)
+                # Denoised signal.
+                if show_graphs_denoising[1]:
+                    scipy.io.wavfile.write(f'media/{filename}_denoised_generated.wav', rate, denoised_signal)
+                    # plot_signal(time_vec, denoised_signal, filename + '_den')
+                    c = plot_spectrogram(denoised_signal, rate, 'denoised', axs_i[1], i == plottypes - 1, not show_graphs_denoising[0], i == 0)
+                    bar.update(i * plottypes + show_graphs_denoising[:1].count(True) + 1)
 
-        bar.finish()
-        print('Saving files to disk. Please stand by.')
-        cbar_ax = fig.add_axes([0.9, 0.15, 0.05, 0.7])  # left, bottom, width, height in percent
-        fig.colorbar(c, cax=cbar_ax)
-        fig.show()
+                # Noise only.
+                if show_graphs_denoising[2]:
+                    scipy.io.wavfile.write(f'media/{filename}_noiseonly_generated.wav', rate, noise_signal)
+                    # plot_signal(time_vec, noise_signal, filename + '_noise')
+                    c = plot_spectrogram(noise_signal, rate, 'noise', axs_i[2], i == plottypes - 1, not (show_graphs_denoising[0] | show_graphs_denoising[1]), i == 0)
+                    bar.update(i * plottypes + show_graphs_denoising[:2].count(True) + 1)
+
+            bar.finish()
+            print('Saving files to disk. Please stand by.')
+            cbar_ax = fig.add_axes([0.9, 0.15, 0.05, 0.7])  # left, bottom, width, height in percent
+            fig.colorbar(c, cax=cbar_ax)
+            fig.show()
+
+        ex.add_artifact(f'{dirpath}/{filename_graph_denoising}.png', name=filename_graph_denoising + '.png')
 
 
-def main_plot_place_comparision():  # TODO: crashes with only one file as parameter
+@ex.capture
+def plot_place_comparision(recordings: dict, filename_graph_comparing: str, comparing_graph_multipass: bool, path: str):
+    """
+    :param recordings: A mapping of locations to filenames to be plotted.
+    :param filename_graph_comparing: name of the saved plot file
+    :param comparing_graph_multipass: Apply multipass approach for better denoising.
+    :param path: path to audio files.
+    Plots a comparision of denoised spectrums for environments with same number of files for each.
+    """
+
     print('Generating plots for places. This may take a while.')
 
     c = None
     # Recording places
-    places = ['Fabi', 'Platz', 'Street', 'Tim', 'Treppe', 'Wald']
+    places_count = len(recordings)
     # Recording ids
-    ids = ['01', '02', '03', '04', '05']
-    with SubplotsAndSave('res', 'noiseenvs', nrows=len(ids), ncols=len(places) + 1, sharey='all', file_types=['png']) as (fig, axs):
-        bar = progressbar.ProgressBar(widgets=['Creating plot: ', progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()], maxval=len(places) * len(ids)).start()
-        for i, end in enumerate(ids):
-            for j, name in enumerate(places):
-                filename = f'live/{name}{end}'
-                time_vec, signal, rate = read_audio(filename)
+    items_count = max([len(n) for n in recordings.values()])
+    # ncols + 1 for scala space. This generates an empty plot, but is the best solution for now.
+    # CAUTION: if removed null pointers may occur later in axs[show_graph[:1].count(True)]
+    with tempfile.TemporaryDirectory() as dirpath:
+        with SubplotsAndSave(dirpath, filename_graph_comparing, nrows=items_count, ncols=places_count + 1, sharey='all', file_types=['png']) as (fig, axs):
+            bar = progressbar.ProgressBar(widgets=['Creating plot: ', progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()],
+                                          maxval=items_count * places_count).start()
+            for i, place in enumerate(recordings.keys()):
+                for j, rec in enumerate(recordings[place]):
+                    time_vec, signal, rate = read_audio(f'{path}{rec}')
 
-                denoised_signal, noise_signal, intervals, a, b = denoise_audio(signal, rate)
-                scipy.io.wavfile.write(f'media/{filename}_denoised_generated.wav', rate, denoised_signal)
-                scipy.io.wavfile.write(f'media/{filename}_noiseonly_generated.wav', rate, noise_signal)
+                    denoised_signal, noise_signal, intervals, a, b = denoise_audio(signal, rate, comparing_graph_multipass)
+                    # scipy.io.wavfile.write(f'{path}{filename}_denoised_generated.wav', rate, denoised_signal)
+                    # scipy.io.wavfile.write(f'{path}{filename}_noiseonly_generated.wav', rate, noise_signal)
 
-                ax = axs[i, j]
-                c = plot_spectrogram(noise_signal, rate, name + ', Noise', ax, i == len(ids) - 1, j == 0, i == 0)
-                # Noise and speach lines at plot top.
-                line_y = 9980
+                    # if only one recording for every environment, axs is one-dimensional
+                    ax = axs[j, i] if items_count > 1 else axs[i]
+                    c = plot_spectrogram(noise_signal, rate, place + ', Noise', ax, j == len(recordings[place]) - 1, i == 0, j == 0)
 
-                for k, (interval_start, interval_end) in enumerate(intervals):
-                    # Assume no noise from beginning of time.
-                    if k == 0:
-                        ax.plot((time_vec[0], time_vec[interval_start]), (line_y, line_y), color='tuda:green', zorder=10)
-                    # Assume no noise between intervals.
-                    if k > 0:
-                        ax.plot((time_vec[intervals[k - 1][1]], time_vec[interval_start]), (line_y, line_y), color='tuda:green', zorder=100)
-                    # Assume no noise to end of time.
-                    if k == intervals.shape[0] - 1:
-                        ax.plot((time_vec[interval_end], time_vec[-1]), (line_y, line_y), color='tuda:green', zorder=10)
-                    ax.plot((time_vec[interval_start], time_vec[interval_end]), (line_y, line_y), color='tuda:red', zorder=100)
-                ax.plot((time_vec[b], time_vec[a]), (line_y, line_y), color='black', zorder=100)
-                # verticalines if needed
-                # for interval in intervals:
-                #    ax.axvline(interval[0] / rate, color='tuda:green', ls='dotted')
-                #    ax.axvline(interval[1] / rate, color='tuda:red', ls='dashed')
-                bar.update(i * len(places) + j + 1)
-        bar.finish()
-        print('Saving files to disk. Please stand by.')
-        cbar_ax = fig.add_axes([0.9, 0.15, 0.05, 0.7])  # left, bottom, width, height in percent
-        fig.colorbar(c, cax=cbar_ax)
-        fig.show()
+                    # Noise and speach lines at plot top.
+                    line_y = 9980
+                    # Colorize intervals of pe noise / speech.
+                    for k, (interval_start, interval_end) in enumerate(intervals):
+                        # Assume no noise from beginning of time.
+                        if k == 0:
+                            ax.plot((time_vec[0], time_vec[interval_start]), (line_y, line_y), color='tuda:green', zorder=10)
+                        # Assume no noise between intervals.
+                        if k > 0:
+                            ax.plot((time_vec[intervals[k - 1][1]], time_vec[interval_start]), (line_y, line_y), color='tuda:green', zorder=100)
+                        # Assume no noise to end of time.
+                        if k == intervals.shape[0] - 1:
+                            ax.plot((time_vec[interval_end], time_vec[-1]), (line_y, line_y), color='tuda:green', zorder=10)
+                        ax.plot((time_vec[interval_start], time_vec[interval_end]), (line_y, line_y), color='tuda:red', zorder=100)
+
+                    ax.plot((time_vec[b], time_vec[a]), (line_y, line_y), color='black', zorder=100)
+                    bar.update(i * items_count + j + 1)
+            bar.finish()
+            print('Saving files to disk. Please stand by.')
+            cbar_ax = fig.add_axes([0.9, 0.15, 0.05, 0.7])  # left, bottom, width, height in percent
+            fig.colorbar(c, cax=cbar_ax)
+            fig.show()
+
+        ex.add_artifact(f'{dirpath}/{filename_graph_comparing}.png', name=filename_graph_comparing + '.png')
+
+
+@ex.capture
+def save_audio_files(recordings: dict, path: str, multipass_audio_files: bool, text: str = ''):
+    """
+    :param recordings: A mapping of locations to filenames to be processed.
+    :param path: Path to audio files.
+    :param multipass_audio_files: Activate multipass.
+    :param text: Additional text for filename beginning. Should end with "_".
+    Generates audio files for original, denoising, designalized. The latter two can use multipass.
+    """
+
+    print('Generating audio files. This may take a while.')
+
+    for place, recs in recordings.items():
+        for rec in recs:
+            with tempfile.TemporaryDirectory() as dirpath:
+                time_vec, signal, rate = read_audio(f'{path}{rec}')
+
+                # Denoise audio.
+                denoised_signal, noise_signal, intervals, a, b = denoise_audio(signal, rate, multipass_audio_files)
+
+                # Geate Audio files.
+                filenames = [f'{dirpath}/{text}{place}_{rec}_{itm}.wav' for itm in ['original', 'denoised' + ('mp' if multipass_audio_files else ''), 'noiseonly']]
+                scipy.io.wavfile.write(filenames[0], rate, signal)
+                scipy.io.wavfile.write(filenames[1], rate, denoised_signal)
+                scipy.io.wavfile.write(filenames[2], rate, noise_signal)
+
+                # Save audio files.
+                for f in filenames:
+                    ex.add_resource(f)
 
 
 @ex.automain
-def main(recordings, recordings_to_be_assigned, path, ending, de_signaled, environments_calculated, environments, recordings_noise_only, recordings_to_be_assigned_noise_only):
-    #time_vec, signal, rate = read_audio('tmp')
-    #segment(signal[:44100], 256)
+def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: str, de_signaled: bool, environments_calculated, environments, recordings_noise_only,
+         recordings_to_be_assigned_noise_only: dict, activate_multipass: bool):  # TODO documentation; parse parameters
+    # time_vec, signal, rate = read_audio('tmp')
+    # segment(signal[:44100], 256)
     envs = {}  # Mapping from place to calculated environment
+    rate = 44100  # default value avoids crashes when plotting
+
     if not de_signaled:
-        recordings_noise_only={}
-        recordings_to_be_assigned_noise_only={}
+        recordings_noise_only = {}
+        recordings_to_be_assigned_noise_only = {}
         for place, recs in recordings.items():
             signals = []
             designaled_signals = []
             for rec in recs:
                 _, signal, rate = read_audio(path + rec)
                 signals.append(signal)
-                _, designaled_signal, _, _, _ = denoise_audio(signal, rate, False)
+                _, designaled_signal, _, _, _ = denoise_audio(signal, rate, activate_multipass)
                 designaled_signals.append(designaled_signal)
 
             envs[place] = fourier_plot.environment_generator(designaled_signals)
             recordings_noise_only[place] = designaled_signals
+
+            # Optional: plot denoising spectrums
+            plot_denoise(recs, filename_graph_denoising=f'file_denoising_steps_environment_{place}')
+
+        # Optional plot environment spectrums
+        plot_place_comparision(recordings, filename_graph_comparing=f'compare_denoised_files_environments')
+
+        # Optional: save audio files
+        save_audio_files(recordings, text='environment_')
 
         for place, recs in recordings_to_be_assigned.items():
             signals = []
@@ -366,11 +453,18 @@ def main(recordings, recordings_to_be_assigned, path, ending, de_signaled, envir
             for rec in recs:
                 _, signal, rate = read_audio(path + rec)
                 signals.append(signal)
-                _, designaled_signal, _, _, _ = denoise_audio(signal, rate, False)
+                _, designaled_signal, _, _, _ = denoise_audio(signal, rate, activate_multipass)
                 designaled_signals.append(designaled_signal)
 
             recordings_to_be_assigned_noise_only[place] = designaled_signals
 
+            # Optional: plot denoising spectrums
+            plot_denoise(recs, filename_graph_denoising=f'file_denoising_steps_assigning_{place}')
+
+            # Optional: save audio files
+            save_audio_files(recordings, text='recording_')
+
+    # Detect environments. TODO: save as file.
     for place, denoised_signals in recordings_to_be_assigned_noise_only.items():
         print(f'Environment: {place}')
         for denoised_signal in denoised_signals:
@@ -386,7 +480,12 @@ def main(recordings, recordings_to_be_assigned, path, ending, de_signaled, envir
     plt.yscale('log')
     plt.xlim((rate / 256, rate / 2 + 1))
     plt.ylim((10 ** 1, 10 ** 5))
+    plt.legend(loc="upper right")
     plt.xlabel("frequency")
     plt.ylabel("energy")
     plt.title("Environment data")
+    with tempfile.TemporaryDirectory() as dirpath:
+        filename = "environments_fourier"
+        plt.savefig(f'{dirpath}/{filename}.png')
+        ex.add_artifact(f'{dirpath}/{filename}.png', name=filename + '.png')
     plt.show()

@@ -7,9 +7,9 @@ Audio file classification using noise. Still under development.
 Setup:
 * Create a virtualenv with `virtualenv $name`
 * Activate the virtualenv with `source $name/bin/activate`
-* Install all requirements with `pip install -r requierements.txt`
+* Install all requirements with `pip install -r requirements.txt`
 
-Save reuirements with `pip freeze > requirements.txt`
+Save requirements with `pip freeze > requirements.txt`
 
 ## Execution
 
@@ -19,6 +19,6 @@ Run main.py. In main(), functionalities can be disabled and parameters for files
 
 /src: Source code
 
-/media: Audio files
+/Audio: Audio files
 
-/res: Results (image and pdf files for spectrograms)
+/results: Results (image files for spectrograms, audio files, logs, …)
