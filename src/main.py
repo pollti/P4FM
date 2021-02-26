@@ -146,7 +146,7 @@ def read_audio(path: str) -> Tuple[np.ndarray, np.ndarray, int]:
     """
     :TODO: make it work with different stereo signals
     Reads Wave-Files 
-    :param path: path to file from media folder, without the .wav ending
+    :param path: path to file from working directory folder, without the .wav ending
     :returns: shape:(T,) all the sampled times as floats
     :returns: shape:(S,) the samples of the left stereoline as int16 values
     :returns: samplerate as float
