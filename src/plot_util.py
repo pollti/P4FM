@@ -1,9 +1,9 @@
 # With the help of https://github.com/fdamken/bachelors-thesis_code/blob/cd69af4d1e385e6b91b3bc12bd97c60671857e30/investigation/plot_util.py
 # Permission granted by author.
 
-import math
 import os
 from typing import List, Tuple, Optional
+
 import matplotlib.pyplot as plt
 
 
@@ -32,40 +32,9 @@ class SubplotsAndSave:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._fig.tight_layout()
-        self._legend()
         for file_type in self._file_types:
             self._fig.savefig('%s/%s.%s' % (self._out_dir, self._file_name, file_type), dpi=200)
         plt.close(self._fig)
-
-    def _legend(self, force_place_legend_inside: bool = False):
-        axes = self._fig.get_axes()
-        if force_place_legend_inside or not self._place_legend_outside:
-            for ax in axes:
-                ax.legend(loc='upper left')
-        else:
-            handles = []
-            labels = []
-            for ax in axes:
-                for handle, label in zip(*ax.get_legend_handles_labels()):
-                    if label not in labels:
-                        handles.append(handle)
-                        labels.append(label)
-            handles = handles
-            labels = labels
-            if self._nrows == 1:
-                pos = 0.9
-                pos -= 0.05 * (int(math.ceil(len(handles) / 3)) - 1)
-            elif self._nrows == 2:
-                pos = 0.925
-                pos -= 0.025 * (int(math.ceil(len(handles) / 3)) - 1)
-            elif self._nrows == 3:
-                pos = 0.95
-                pos -= 0.025 * (int(math.ceil(len(handles) / 3)) - 1)
-            else:
-                print(f'Unsupported number of rows: {self._nrows} Legend will be placed in every axes!')
-                return self._legend(force_place_legend_inside=True)
-            self._fig.subplots_adjust(top=pos)
-            self._fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, pos), ncol=3)
 
 
 def figsize(nrows: int, ncols: int, place_legend_outside: bool = False) -> Tuple[int, int]:
