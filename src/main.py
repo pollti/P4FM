@@ -302,14 +302,14 @@ def plot_denoise(filenames: np.ndarray, filename_graph_denoising: str, show_grap
 
                 # Denoised signal.
                 if show_graphs_denoising[1]:
-                    scipy.io.wavfile.write(f'media/{filename}_denoised_generated.wav', rate, denoised_signal)
+                    #scipy.io.wavfile.write(f'media/{filename}_denoised_generated.wav', rate, denoised_signal)
                     # plot_signal(time_vec, denoised_signal, filename + '_den')
                     c = plot_spectrogram(denoised_signal, rate, 'denoised', axs_i[1], i == plottypes - 1, not show_graphs_denoising[0], i == 0)
                     bar.update(i * plottypes + show_graphs_denoising[:1].count(True) + 1)
 
                 # Noise only.
                 if show_graphs_denoising[2]:
-                    scipy.io.wavfile.write(f'media/{filename}_noiseonly_generated.wav', rate, noise_signal)
+                    #scipy.io.wavfile.write(f'media/{filename}_noiseonly_generated.wav', rate, noise_signal)
                     # plot_signal(time_vec, noise_signal, filename + '_noise')
                     c = plot_spectrogram(noise_signal, rate, 'noise', axs_i[2], i == plottypes - 1, not (show_graphs_denoising[0] | show_graphs_denoising[1]), i == 0)
                     bar.update(i * plottypes + show_graphs_denoising[:2].count(True) + 1)
