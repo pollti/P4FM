@@ -19,6 +19,7 @@ from matplotlib.contour import QuadContourSet
 # from src.multiband_spectral_substraction import segment
 from src.plot_util import SubplotsAndSave
 from src.multiband_spectral_substraction import multiband_substraction_denoise
+from src.aggregation_method import AggregationMethod
 
 from sacred import Experiment
 
@@ -32,34 +33,43 @@ np.set_printoptions(linewidth=2000)
 # noinspection PyUnusedLocal
 @ex.config
 def ex_config():
-    de_signaled = False  # set true to use pre designaled recordings AND recordings_to_be_assigned
-    environments_calculated = False  # set true to use precalculated environments
+    de_signaled = False  # set true to use pre designaled recordings AND recordings_to_be_assigned; Not recommended for most cases.
+    # (not supported yet) environments_calculated = False  # set true to use precalculated environments
 
+    # Audio settings
     path = "Audio/"  # The relative path to the recordings depends on working directory
-    ending = ".wav"
-    # recordings = {"Raum1": ["Fabi01", "Fabi02", "Fabi03", "Fabi04", "Fabi05"],
-    #               "Raum2": ["Tim01", "Tim02", "Tim03", "Tim04", "Tim05"],
-    #               "Platz": ["Platz01", "Platz02", "Platz03", "Platz04", "Platz05"],
-    #               "Strasse": ["Street01", "Street02", "Street03", "Street04", "Street05"],
-    #               "Treppe": ["Treppe01", "Treppe02", "Treppe03", "Treppe04", "Treppe05"],
-    #               "Wald": ["Wald01", "Wald02", "Wald03", "Wald04", "Wald05"]}  # filenames assigned to location
-    recordings = {"Raum1": ["Fabi01", "Fabi02"],
-                  "Raum2": ["Tim01", "Tim02"]}
+    ending = ".wav"  # audio fileending, currently only supports .wav files
+    recordings = {"Raum1": ["Fabi01", "Fabi02", "Fabi03", "Fabi04", "Fabi05"],
+                  "Raum2": ["Tim01", "Tim02", "Tim03", "Tim04", "Tim05"],
+                  "Platz": ["Platz01", "Platz02", "Platz03", "Platz04", "Platz05"],
+                  "Strasse": ["Street01", "Street02", "Street03", "Street04", "Street05"],
+                  "Treppe": ["Treppe01", "Treppe02", "Treppe03", "Treppe04", "Treppe05"],
+                  "Wald": ["Wald01", "Wald02", "Wald03", "Wald04", "Wald05"]}  # filenames assigned to location
     recordings_to_be_assigned = deepcopy(
         recordings)  # deepcopy notwendig um nicht nur die Referenz zu kopieren, for this default case we want to assign the already assigned data to see how acurate it works
     recordings_to_be_assigned["unknown"] = ["Fabi01"]  # put one file for test purpose
-    environments = None
+    ## Give noise_only files and environments here instead of the parameters above, if de_signaled = False - not recommended
+    envs = None
     recordings_noise_only = None
     recordings_to_be_assigned_noise_only = None
-    activate_multipass = False
-    multipass_audio_files = activate_multipass
-    # graphs
-    show_graphs_denoising = [True, True, True]
-    filename_graph_denoising = "file_denoising_steps"
-    denoising_graph_multipass = activate_multipass
-    filename_graph_comparing = "compare_denoised_files"
-    comparing_graph_multipass = activate_multipass
-    generate_audio = False
+    activate_multipass = False  # whether to use multipass approach for comparisions
+    multipass_audio_files = activate_multipass  # whether to use multipass for audio file generation
+    generate_audio = True  # whether to generate the audio files (denoed, noise only) as well
+
+    # Graph properties
+    show_graphs_denoising = [True, True, True]  # what to show graphs: [original, denoised, noise only]
+    filename_graph_denoising = "file_denoising_steps"  # filename for denoising graph
+    denoising_graph_multipass = activate_multipass  # whether to use multipass for denoising plot
+    filename_graph_comparing = "compare_denoised_files"  # filename for envoronment comparision graph
+    comparing_graph_multipass = activate_multipass  # whether to use multipass for comparision plot
+
+    # Comparision metric parameters
+    squared: bool = True  # square errors (otherwise: linear)
+    y_log: bool = False  # logarithmic y scaling in comparision
+    x_log: bool = False  # logarithmic x scaling in comparision (has no effect for frequency_aggregation = MEDIAN)
+    dga: bool = False  # Use Double Gaussian Approach
+    frequency_aggregation_method: AggregationMethod = AggregationMethod.MEAN  # Aggregation method over frequencies in window
+    window_aggregation_method: AggregationMethod = AggregationMethod.MEDIAN  # Aggregation method over different windows
 
 
 def get_speech_postions(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, int]:
@@ -448,9 +458,9 @@ def save_audio_files(recordings: dict, path: str, multipass_audio_files: bool, t
 
 
 @ex.automain
-def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: str, de_signaled: bool,
-         environments_calculated, environments, recordings_noise_only,
-         recordings_to_be_assigned_noise_only: dict, activate_multipass: bool, audio_save:bool= True, plot_environment: bool=True, plot_denoising_spectrums: bool = True):  # TODO documentation; parse parameters
+def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: str, envs: np.ndarray, de_signaled: bool, frequency_aggregation_method: AggregationMethod,
+         window_aggregation_method: AggregationMethod, recordings_to_be_assigned_noise_only: dict, activate_multipass: bool, audio_save: bool = True, plot_environment: bool = True,
+         plot_denoising_spectrums: bool = True, squared: bool = True, y_log: bool = False, x_log: bool = False, dga: bool = False):  # TODO documentation; parse parameters
     # time_vec, signal, rate = read_audio('tmp')
     # segment(signal[:44100], 256)
     envs = {}  # Mapping from place to calculated environment
@@ -468,7 +478,7 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
                 _, designaled_signal, _, _, _ = denoise_audio(signal, rate, activate_multipass)
                 designaled_signals.append(designaled_signal)
 
-            envs[place] = fourier_plot.environment_generator(designaled_signals)
+            envs[place] = fourier_plot.environment_generator(designaled_signals, window_aggregation_method)
             recordings_noise_only[place] = designaled_signals
 
             # Optional: plot denoising spectrums
@@ -506,11 +516,12 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
     with tempfile.TemporaryDirectory() as dirpath:
         filename = "environment_errors.csv"
         with open(f'{dirpath}/{filename}', "w") as file:
-            file.write("recorded_in," + ",".join(["error_to_"+env for env in envs.keys()])+"\n")
+            file.write("recorded_in," + ",".join(["error_to_" + env for env in envs.keys()]) + "\n")
             for place, denoised_signals in recordings_to_be_assigned_noise_only.items():
                 for denoised_signal in denoised_signals:
                     tmp = ",".join(
-                        [str(x) for x in fourier_plot.environment_detector(rate, denoised_signal, *envs.values())])
+                        [str(x) for x in
+                         fourier_plot.environment_detector(rate, denoised_signal, frequency_aggregation_method, squared, y_log, x_log, dga, *envs.values())])
                     temp = place + "," + tmp
                     file.write(temp + "\n")
         ex.add_artifact(f'{dirpath}/{filename}', name=filename)

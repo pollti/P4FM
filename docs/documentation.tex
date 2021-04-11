@@ -134,9 +134,9 @@ Wir analysieren zunächst auf kleinen Fenstern das Vorhandensein von Sprache. Da
 
 Mithilfe des zuvor bestimmten größten Rauschintervalls führen wir nun eine Rauschreduzierung auf überlappenden Fenstern durch. Diese ist ähnlich zur Implementierung in Audacity. Dennoch funktionierte sie – vermutlich durch flexiblere Parametrisierung und die automatische Erkennung eines geeigneten Rauschintervalls – besser\footnote{Auch wenn es hier keine klare Metrik gibt, basiert diese Aussage auf einem akustischen Anhören der resultierenden Audiodateien und der Betrachtung von Zeit-Frequenz-Plots in denen die jeweiligen Energien durch Farben dargestellt werden. Jeweils kann das Verbleiben von Sprachfrequenzen subjektiv beurteilt werden.}. Eine erste Rauschapproximation erhalten wir nun durch Subtraktion des rauschreduzierten Signals vom Ursprungssignal.
 
-Um verbleibende Sprachanteile „Voice Leakage“ weiter zu reduzieren, folgen wir dem Ansatz von \cite{kamath_multi-band_2002}. Dort wird Multiband Spectral Substraction vorgestellt, durch den frequenzbandspezifisch Sprachanteile im Rauschen und zuvor zu stark reduziertes Rauschen ausgeglichen werden. Die Formeln lassen wir hier aus und verweisen auf das o.~g. Paper sowie den Quellcode. Unter Zuhilfenahme einer Matlab-Implementierung \cite{zavarehei_multi-band_nodate} haben wir eine funktionell an unsere Bedürfnisse angepasste Python-Implementierung erstellt. Diese nutzt in unserer angepassten Version die zuvor erkannten Intervalle reinen Rauschens als Grundlage. Hierbei mussten wir zwar einen deutlichen Abfall der Gesamtenergie und damit einen potenziellen Präzisionsverlust verzeichnen, erhielten aber nach o.~g. Kriterien auch sprachfreiere Ergebnisse.
+Um verbleibende Sprachanteile „Voice Leakage“ weiter zu reduzieren, folgen wir dem Ansatz von \cite{kamath_multi-band_2002}. Dort wird Multiband Spectral Subtraction vorgestellt, durch den frequenzbandspezifisch Sprachanteile im Rauschen und zuvor zu stark reduziertes Rauschen ausgeglichen werden. Die Formeln lassen wir hier aus und verweisen auf das o.~g. Paper sowie den Quellcode. Unter Zuhilfenahme einer Matlab-Implementierung \cite{zavarehei_multi-band_nodate} haben wir eine funktionell an unsere Bedürfnisse angepasste Python-Implementierung erstellt. Diese nutzt in unserer angepassten Version die zuvor erkannten Intervalle reinen Rauschens als Grundlage. Hierbei mussten wir zwar einen deutlichen Abfall der Gesamtenergie und damit einen potenziellen Präzisionsverlust verzeichnen, erhielten aber nach o.~g. Kriterien auch sprachfreiere Ergebnisse.
 
-Zu beachten ist, dass auch in der Implementierung der Multiband Spectral Substraction ein Voice Activity Detector~(VAD) zwecks Sprachklassifizierung zum Einsatz kommt. Im Gegensatz zum zuvor erwähnten, basiert dieser jedoch darauf bereits ein kurzes Intervall reinen Rauschens als Grundlage zu haben und bekommt somit bei uns auch das längste Rauschintervall aus der Klassifizierung vor der ersten Rauschreduzierung.
+Zu beachten ist, dass auch in der Implementierung der Multiband Spectral Subtraction ein Voice Activity Detector~(VAD) zwecks Sprachklassifizierung zum Einsatz kommt. Im Gegensatz zum zuvor erwähnten, basiert dieser jedoch darauf bereits ein kurzes Intervall reinen Rauschens als Grundlage zu haben und bekommt somit bei uns auch das längste Rauschintervall aus der Klassifizierung vor der ersten Rauschreduzierung.
 
 \pagebreak
 \subsection{Umgebungsdetektion}
@@ -209,12 +209,12 @@ Zu Raum 2 existieren außerdem auch eine Aufnahme des Mobiltelefons unter einer 
 \subsection{Plots}
 \label{plots}
 
-Zunächst wenden wir uns der Rauschextraktion zu. In Abbildung~\ref{fig:denoise}\footnote{Für die Kombinierung mehrerer Plots in einer Grafik und die Bereitstellung der TU-Farben nutzen wir eine Bibliothek aus \cite{damken_fdamkenbachelors-thesis_code_2020}.} ist dieser Prozess dargestellt. Dabei ist zu beachten, dass das linkeste Diagramm im dargestellten Verlauf nicht genau der Differenz der ersten beiden entspricht, da hier zwischendurch noch die Multiband Spectral Substraction angewendet wurde, die wie bereits erwähnt zwar die Voice Leakage, damit aber auch das Energielevel reduziert. Im oberen Beispiel von Abbildung~\ref{fig:denoise} ist eine zu starke Entfernung von Sprachsignalen erkennbar, die zu „Löchern“ im Rauschen führt. Dieser Effekt war in unseren Tests jedoch nur selten sichtbar. Während im Originalton und im rauschreduzierten Signal jeweils klar Sprache sichtbar ist (ca. Sekunden 9-25), ist dies im reinen Rauschen rechts stark reduziert. Akustische Tests bestätigen, dass zwar keine vollständig präzise Eliminierung aller Sprache erreicht wurde, diese aber stark reduziert wurde und auch mit Lautstärke-Erhöhung kaum noch verständlich ist.
+Zunächst wenden wir uns der Rauschextraktion zu. In Abbildung~\ref{fig:denoise}\footnote{Für die Kombinierung mehrerer Plots in einer Grafik und die Bereitstellung der TU-Farben nutzen wir eine Bibliothek aus \cite{damken_fdamkenbachelors-thesis_code_2020}.} ist dieser Prozess dargestellt. Dabei ist zu beachten, dass das linkeste Diagramm im dargestellten Verlauf nicht genau der Differenz der ersten beiden entspricht, da hier zwischendurch noch die Multiband Spectral Subtraction angewendet wurde, die wie bereits erwähnt zwar die Voice Leakage, damit aber auch das Energielevel reduziert. Im oberen Beispiel von Abbildung~\ref{fig:denoise} ist eine zu starke Entfernung von Sprachsignalen erkennbar, die zu „Löchern“ im Rauschen führt. Dieser Effekt war in unseren Tests jedoch nur selten sichtbar. Während im Originalton und im rauschreduzierten Signal jeweils klar Sprache sichtbar ist (ca. Sekunden 9-25), ist dies im reinen Rauschen rechts stark reduziert. Akustische Tests bestätigen, dass zwar keine vollständig präzise Eliminierung aller Sprache erreicht wurde, diese aber stark reduziert wurde und auch mit Lautstärke-Erhöhung kaum noch verständlich ist.
 
 \begin{figure}[h]
 	\centering
 	\includegraphics[width=1.0\textwidth]{media/denoiser2mp}
-	\caption{Darstellung der Rauschextraktion von zwei Aufnahmen (obere bzw. untere Zeile) aus der Umgebung „Raum 2“. Es handelt sich jeweils um Zeit-Frequenzplots bei denen die Farben das jeweilige Energielevel der entsprechenden Frequenz zum entsprechenden Zeitpunkt darstellen. Von links nach rechts sind jeweils erst Originaldaten, dann das rauschreduzierte Signal und schließlich das reine Rauschen nach Multiband Spectral Substraction dargestellt. Auf der x-Achse sind jeweils Sekunden, auf der y-Achse Herz aufgetragen.}
+	\caption{Darstellung der Rauschextraktion von zwei Aufnahmen (obere bzw. untere Zeile) aus der Umgebung „Raum 2“. Es handelt sich jeweils um Zeit-Frequenzplots bei denen die Farben das jeweilige Energielevel der entsprechenden Frequenz zum entsprechenden Zeitpunkt darstellen. Von links nach rechts sind jeweils erst Originaldaten, dann das rauschreduzierte Signal und schließlich das reine Rauschen nach Multiband Spectral Subtraction dargestellt. Auf der x-Achse sind jeweils Sekunden, auf der y-Achse Herz aufgetragen.}
 	\label{fig:denoise}
 \end{figure}
 
@@ -225,7 +225,7 @@ Als nächstes betrachten wir nun also die Rauschsignale verschiedener Aufnahmen 
 \begin{figure}[h]
 	\centering
 	\includegraphics[width=1.0\textwidth]{media/comp}
-	\caption{Darstellung der Rauschapproximationen verschiedener Aufnahmen (Spalten sind Umgebungen, Zeilen verschiedene dort aufgenommene Aufnahmen). Es handelt sich jeweils um Zeit-Frequenzplots bei denen die Farben das jeweilige Energielevel der entsprechenden Frequenz zum entsprechenden Zeitpunkt darstellen. Die Multiband Spectral Substraction war hier deaktiviert, da die Unterschiede dadurch optisch besser erkennbar sind. Auf der x-Achse sind jeweils Sekunden, auf der y-Achse Herz aufgetragen.}
+	\caption{Darstellung der Rauschapproximationen verschiedener Aufnahmen (Spalten sind Umgebungen, Zeilen verschiedene dort aufgenommene Aufnahmen). Es handelt sich jeweils um Zeit-Frequenzplots bei denen die Farben das jeweilige Energielevel der entsprechenden Frequenz zum entsprechenden Zeitpunkt darstellen. Die Multiband Spectral Subtraction war hier deaktiviert, da die Unterschiede dadurch optisch besser erkennbar sind. Auf der x-Achse sind jeweils Sekunden, auf der y-Achse Herz aufgetragen.}
 	\label{fig:compare}
 \end{figure}
 
@@ -234,7 +234,7 @@ Schließlich wenden wir uns noch dem Vergleich der Umgebungs-Rauschapproximation
 \begin{figure}[h]
 	\centering
 	\includegraphics[width=0.45\textwidth]{media/envs}
-	\caption{Darstellung der Rauschapproximationen verschiedener Umgebungen (eine Farbe pro Umgebung). Es handelt sich um einen Frequenz-Intensitätsplot. Die Multiband Spectral Substraction war hier deaktiviert, die Unterschiede zu aktivierter Multiband Spectral Substraction sind nicht groß. Auf der x-Achse sind Herz aufgetragen.}
+	\caption{Darstellung der Rauschapproximationen verschiedener Umgebungen (eine Farbe pro Umgebung). Es handelt sich um einen Frequenz-Intensitätsplot. Die Multiband Spectral Subtraction war hier deaktiviert, die Unterschiede zu aktivierter Multiband Spectral Subtraction sind nicht groß. Auf der x-Achse sind Herz aufgetragen.}
 	\label{fig:envs}
 \end{figure}
 
@@ -253,6 +253,7 @@ Bei Betrachtung der Unterschiede zwischen den einzelnen Aufnahmen einer Umgebung
 
 \pagebreak
 \subsection{Erkennung}
+\label{erkennung}
 
 Zum Test der Umgebungserkennung haben wir die aus den Umgebungen aus Abschnitt \ref{envs} generierten Rauschapproximationen erstellt. Zunächst versuchen wir nun die einzelnen dieser Aufnahmen den Umgebungen wieder zuzuordnen\footnote{Hierbei sind die zuzuordnenden Testdaten auch in der Umgebungsgenerierung genutzt worden. Durch die vorherige Median-Bildung über die Werte aller Fenster in allen dort aufgenommenen Aufnahmen, gehen wir jedoch davon aus, dass die Ergebnisverfälschung dadurch gering ist. Tests bei denen nur auf den anderen Aufnahmen des Ortes die Umgebung generiert wurde oder neue Aufnahmen zugeordnet wurden, führten zu ähnlichen Ergebnissen.}. Die Ergebnisse unterscheiden sich mit den verschiedenen in Abschnitt~\ref{envdetect} beschriebenen Parametern, zwei gute Ergebnisse sind in Abbildung~\ref{fig:vals1} dargestellt. Im linken Beisiel wurden einige Umgebungen richtig erkannt. Vor allem wurden jedoch einige in „Raum 1“ aufgenommene Aufnahmen zu „Raum 2“ zugeordnet was aufgrund der ähnlichen Eigenschaften der Räume wenig überraschend ist. Im rechten Beispiel funktioniert die Klassifizierung der beiden Räume etwas besser, dafür gibt es im Treppenhaus einige Fehlklassifizierungen. Die verschiedenen Parameter erzielen an verschiedenen Stellen also unterschiedlich gute Ergebnisse. Bei Fehlklassifizierungen sind die richtigen Umgebungen jedoch meist noch grün was eine immer noch geringe Abweichung (also kleine Zahl) darstellt.
 
@@ -276,7 +277,7 @@ Um die Störabweichung zu untersuchen haben wir in „Raum 2“ jeweils zwei Auf
 \IMRADlabel{discussion}
 \subsection{Resümee}
 
-Unsere Rauschextraktion macht es für menschliche Hörer*innen meist schwer noch Teile der Sprache zu verstehen bzw. erfordert dazu eine deutliche Verstärkung des Signals. Subjektiv wirkt die Rauschentfernung ohne aufwändige Konfiguration besser als die beispielsweise in Audacity \cite{audacity_audacity_nodate} implementierte was an flexiblerer Implementierung der genutzten Funktionen und der automatischen Detektion eines geeigneten Rauschintervalls liegen könnte. Die Multiband Spectral Substraction führte zu weniger Voice Leakage, reduzierte aber auch die Gesamtenergie – insgesamt funktionierten die weiteren Funkionen unserer Software nach Anwendung von Multiband Spectral Substraction nicht wesentlich besser.
+Unsere Rauschextraktion macht es für menschliche Hörer*innen meist schwer noch Teile der Sprache zu verstehen bzw. erfordert dazu eine deutliche Verstärkung des Signals. Subjektiv wirkt die Rauschentfernung ohne aufwändige Konfiguration besser als die beispielsweise in Audacity \cite{audacity_audacity_nodate} implementierte was an flexiblerer Implementierung der genutzten Funktionen und der automatischen Detektion eines geeigneten Rauschintervalls liegen könnte. Die Multiband Spectral Subtraction führte zu weniger Voice Leakage, reduzierte aber auch die Gesamtenergie – insgesamt funktionierten die weiteren Funkionen unserer Software nach Anwendung von Multiband Spectral Subtraction nicht wesentlich besser.
 
 Die Erkennung der Umgebungen funktioniert mit den meisten Paramtern recht zuverlässig auf sehr unterschiedlichen umgebungen, bei ähnlichen Umgebungen wie etwa den beiden benachbarten Räumen funktioniert sie teils nicht mehr oder nur mit wenigen Paramtern.
 
@@ -316,7 +317,47 @@ Ein weiterer Ansatz wäre starke Abweichungen zwischen verschiedenen, kurzen Fen
 \section{Bedienung}
 \label{usage}
 
-pip-Pakete, Aufrufen, Paramter setzen, Daten interpretieren, ausgegeben Dateien, Minimalbeispiel, …
+
+\subsection{Einrichtung}
+
+\begin{enumerate}
+	\item Erstellen Sie eine virtuelle Umgebung mit dem Befehl \texttt{virtualenv \$name}
+	\item Aktivieren Sie diese mit \texttt{source \$name/bin/activate}
+	\item Installieren Sie alle erforderlichen Pakete mit \texttt{pip install -r requirements.txt}.
+\end{enumerate}
+
+Nach Änderung des Codes müssen die erforderlichen pakete ggf. durch \texttt{pip freeze > requirements.txt} angepasst werdenx
+
+\subsection{Ausführung}
+
+Durch Ausführen von \texttt{python main.py} im Ordner \texttt{src} wird der Code ausgeführt. Dazu müssen vorher die Paramter angepasst werden und ggf. die benötigten Audiodateien entsprechend der Parameter und Ordnerstruktur hinterlegt werden.
+
+Ein Beispielskript zur Ausführung unter Linux wird bereitgestellt.
+
+\subsection{Ordnerstruktur}
+
+Es gibt die folgenden Ordner:
+
+\texttt{src}: Hier liegt der Quellcode inklusive der \texttt{main.py}.
+
+\texttt{Audio}: Hier liegen die einzugebenden Audiodateien.
+
+\texttt{results}: Hier werden nach Ausführung der Software alle erstellten Dateien abgelegt. Dazu wird für jede Ausführung ein neuer Ordner mit der Run-ID (aufsteigende Zahlen) angelegt. In diesen liegen dann die Plots/Spektrogramme und Ausgabewerte (CSV), sowie Log-Dateien und Konfigurationsinformationen. Für die Audiodateien wird lediglich ein Pfad auf den Ordner \texttt{\_resources} in der Datei \texttt{run.js} angegeben, damit identische Dateien aus mehreren Ausführungen nicht mehrfach abgelegt werden.
+
+\texttt{results}: Hier liegt die Projektdokumentation sowie eine Visualisierungsvorlage.
+
+\subsection{Parametrisierung}
+In der Datei \texttt{src/main.py}, können Funktionalitäten (de-)aktiviert werden und Parameter, wie bspw. die zu verarbeitenden Audiodateien) gesetzt werden. Im Code sind kurze Beschreibungen der einzelnen Einstellungen gegeben.
+
+\paragraph{Audio} (Code-Kommentar „\texttt{Comparision metric parameters}“): Hier werden die Audiodateien festgelegt. Dazu gibt es ein Mapping von bekannten Umgebungen zu den dort erstellten Aufnahmen. Anschließend können weitere Aufnahmen festgelegt werden, die nun (so wie auch die Dateien zur Umgebungsgenerierung) den Umgebungen zugeordnet werden. Außerdem kann die Generierung von Audiodateien (ohne Rauschen / reines Rauschen) (de-)aktiviert werden.
+
+\paragraph{Plots} (Code-Kommentar „\texttt{Graph properties}“): Hier können Einstellungen zu den Grafiken festgelegt werden, also bspw. Dateinamen, Aktivierung des Multipass-Ansatzes usw.
+
+\paragraph{Metriken} (Code-Kommentar „\texttt{Comparision metric parameters}“): Die in Abschnitt \ref{envdetect} genannten Metrikanpassungen können eingestellt werden.
+
+\subsection{Interpretation} 
+
+Da auf die meisten Ausgabedaten schon in der Dokumentation näher eingegangen wurde, konzentrieren wir uns hier auf die numerischen Ergebnisse in der Datei \texttt{environment\_errors.csv} in den Ergebnissen. Hier stellen die Zeilen die zuzuordnenden Dateien dar und die jeweils kleinste Zahl entspricht der wahrscheinlichsten Umgebung für die Datei (s. Abschnitt~\ref{erkennung} für mehr Details). Mehrere kleine Zahlen zeigen weitere wahrscheinliche Umgebungen auf oder deuten auf Audioanteile beider Umgebungen in der Datei hin. Zur Visualisierung entsprechend Abbildung~\ref{fig:vals1} können die Werte in die Vorlage in \texttt{docs/data\_visualization\_template.ots} kopiert werden.
 
 \appendix
 
