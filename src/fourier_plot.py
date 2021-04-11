@@ -30,7 +30,7 @@ def environment_detector(rate: int, signal: np.ndarray, *envs: np.ndarray, size:
     :param signal: The signal of the recording under testing. Should be noise only already by here and not be too short.
     :param envs: Expected frequency-energy levels per environment. Same window size as [size] and sample rate as [rate] must have been used to generate these.
     :param size: The window size for a single rfft. Choose higher values for more detailed frequency comparision.
-    :return: Difference values per environment in the order of environments provided as parameters. Result dimension is highly dependent on squared error paramters.
+    :return: Difference values per environment in the order of environments provided as parameters.
     """
     signal = segment(signal, size, 0.4, sp.signal.gaussian(size, size * 0.4))
     data = np.abs(np.fft.rfft(signal, axis=0))
