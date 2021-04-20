@@ -476,9 +476,9 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
     :param audio_save: If the audio files are to be saved.
     :param plot_environment: If the environments are to be plotted.
     :param plot_denoising_spectrums: If the denoising spectrums are to be plotted.
-    :param squared:
-    :param y_log:
-    :param x_log:
+    :param squared: If the square error is to be computed. (Instead of the linear error)
+    :param y_log: If the the y values are to be exchanged by their logarithm values before the difference calculation.
+    :param x_log: If the the y values are to be exchanged by their logarithm values before the difference calculation.
     :param dga:
     """
     # time_vec, signal, rate = read_audio('tmp')
