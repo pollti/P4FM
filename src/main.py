@@ -462,7 +462,6 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
          window_aggregation_method: AggregationMethod, recordings_to_be_assigned_noise_only: dict, activate_multipass: bool, audio_save: bool = True, plot_environment: bool = True,
          plot_denoising_spectrums: bool = True, squared: bool = True, y_log: bool = False, x_log: bool = False, dga: bool = False):  # TODO documentation; parse parameters
     """
-
     :param recordings: A mapping of locations to filenames to be processed.
     :param recordings_to_be_assigned: A mapping of estimated locations to filenames. The algorithm will search for the location of the respective files.
     :param path: The relative path from the working directory to the audio files
@@ -479,7 +478,7 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
     :param squared: If the square error is to be computed. (Instead of the linear error)
     :param y_log: If the the y values are to be exchanged by their logarithm values before the difference calculation.
     :param x_log: If the the y values are to be exchanged by their logarithm values before the difference calculation.
-    :param dga:
+    :param dga: Double Gaussion Approach DGA weights frequencies in common voice spectrum lower. Use with caution as manipulations in voice spectrum might not be detected and results may be less good anyway.
     """
     # time_vec, signal, rate = read_audio('tmp')
     # segment(signal[:44100], 256)

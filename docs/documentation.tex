@@ -120,11 +120,11 @@ Im Folgenden gehen wir auf die Teile der Implementierung ein und wie diese funkt
 
 \subsection{Allgemein}
 
-Unsere Implementierung ist in Python geschrieben. Das ermöglicht die Nutzung effizienter Library-Implementierungen von Funktionen wie etwa FFT aus NumPy und einfachen In- und Export sowie Verarbeitung von Audio-Signalen und strukturierten Daten wie CSV. Eine gute Alternative wäre eine Implementierung in der ebenfalls verbreiteten Sprache Matlab mit ähnlichen Eigenschaften.
+Unsere Implementierung ist in Python geschrieben. Das ermöglicht die Nutzung effizienter Library-\linebreak Implementierungen von Funktionen wie etwa FFT aus NumPy und einfachen In- und Export sowie Verarbeitung von Audio-Signalen und strukturierten Daten wie CSV. Eine gute Alternative wäre eine Implementierung in der ebenfalls verbreiteten Sprache Matlab mit ähnlichen Eigenschaften.
 
 Zunächst lesen wir Audiospuren aus WAV-Dateien als Signalvektor ein. Unsere Audiodateien sind zunächst mit einem Gerät und ohne Rauschunterdrückung bzw. Lautstärkeadaption aufgenommene WAV-Dateien mit einer Samplerate von 44,1kHz und einer Tonspur. Die Software funktioniert jedoch auch mit anderen Frequenzen und kann auch Stereo-Dateien einlesen, wobei die Analysen jedoch nur auf einer der Spuren ausgeführt werden.
 
-Unsere vollständige Implementierung sowie eine Liste der benötigten pip-Pakete und ein Beispielskript zur Nutzung der Software sind unter \cite{blumer_polltip4fm_2020} zu finden. % TODO noch nicht öffentlich bzw. Skript nicht existent.´
+Unsere vollständige Implementierung sowie eine Liste der benötigten pip-Pakete und ein Beispielskript zur Nutzung der Software sind unter \cite{blumer_polltip4fm_2020} zu finden. % TODO noch nicht öffentlich bzw. Skript nicht existent.
 
 \IMRADlabel{methods}
 \subsection{Rauschextraktion}
