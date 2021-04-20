@@ -461,6 +461,26 @@ def save_audio_files(recordings: dict, path: str, multipass_audio_files: bool, t
 def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: str, envs: np.ndarray, de_signaled: bool, frequency_aggregation_method: AggregationMethod,
          window_aggregation_method: AggregationMethod, recordings_to_be_assigned_noise_only: dict, activate_multipass: bool, audio_save: bool = True, plot_environment: bool = True,
          plot_denoising_spectrums: bool = True, squared: bool = True, y_log: bool = False, x_log: bool = False, dga: bool = False):  # TODO documentation; parse parameters
+    """
+
+    :param recordings: A mapping of locations to filenames to be processed.
+    :param recordings_to_be_assigned: A mapping of estimated locations to filenames. The algorithm will search for the location of the respective files.
+    :param path: The relative path from the working directory to the audio files
+    :param ending: The ending of the audiofiles.
+    :param envs: Already computed and saved environments.
+    :param de_signaled: If there are already designaled and saved audiofiles.
+    :param frequency_aggregation_method: The Aggregation Method used for frequencies.
+    :param window_aggregation_method: The Aggregation Method used for the windows.
+    :param recordings_to_be_assigned_noise_only: A mapping of location to filenames of files, which are noise-only.
+    :param activate_multipass: If the multipass method will be used.
+    :param audio_save: If the audio files are to be saved.
+    :param plot_environment: If the environments are to be plotted.
+    :param plot_denoising_spectrums: If the denoising spectrums are to be plotted.
+    :param squared:
+    :param y_log:
+    :param x_log:
+    :param dga:
+    """
     # time_vec, signal, rate = read_audio('tmp')
     # segment(signal[:44100], 256)
     envs = {}  # Mapping from place to calculated environment
