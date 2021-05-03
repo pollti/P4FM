@@ -55,6 +55,7 @@ def ex_config():
     activate_multipass = False  # whether to use multipass approach for comparisions
     multipass_audio_files = activate_multipass  # whether to use multipass for audio file generation
     audio_save = True  # whether to generate the audio files (denoised, noise only) as well
+    snooze = False  # no audio files or plots generated - may be much faster
 
     # Graph properties
     show_graphs_denoising = [True, True, True]  # what to show graphs: [original, denoised, noise only]
@@ -215,7 +216,7 @@ def plot_signal(time_vec: np.ndarray, signal: np.ndarray, caption: str) -> None:
     fig, ax = plt.subplots()
     ax.set_title(f'Signal ({caption})')
     ax.plot(time_vec, signal)
-    fig.show()
+    # fig.show()
 
 
 def plot_spectrogram(signal: np.ndarray, rate: float, caption: str, ax, show_xlabel: bool, show_ylabel: bool,
@@ -349,7 +350,7 @@ def plot_denoise(filenames: np.ndarray, filename_graph_denoising: str, show_grap
             print('Saving files to disk. Please stand by.')
             cbar_ax = fig.add_axes([0.9, 0.15, 0.05, 0.7])  # left, bottom, width, height in percent
             fig.colorbar(c, cax=cbar_ax)
-            fig.show()
+            # fig.show()
 
         ex.add_artifact(f'{dirpath}/{filename_graph_denoising}.png', name=filename_graph_denoising + '.png')
 
@@ -418,7 +419,7 @@ def plot_place_comparision(recordings: dict, filename_graph_comparing: str, comp
             print('Saving files to disk. Please stand by.')
             cbar_ax = fig.add_axes([0.9, 0.15, 0.05, 0.7])  # left, bottom, width, height in percent
             fig.colorbar(c, cax=cbar_ax)
-            fig.show()
+            # fig.show()
 
         ex.add_artifact(f'{dirpath}/{filename_graph_comparing}.png', name=filename_graph_comparing + '.png')
 
@@ -456,10 +457,11 @@ def save_audio_files(recordings: dict, path: str, multipass_audio_files: bool, t
 
 
 @ex.automain
-def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: str, envs: np.ndarray, de_signaled: bool, frequency_aggregation_method: AggregationMethod,
+def main(snooze: bool, recordings: dict, recordings_to_be_assigned: dict, path: str, ending: str, envs: np.ndarray, de_signaled: bool, frequency_aggregation_method: AggregationMethod,
          window_aggregation_method: AggregationMethod, recordings_to_be_assigned_noise_only: dict, activate_multipass: bool, audio_save: bool, plot_environment: bool = True,
          plot_denoising_spectrums: bool = True, squared: bool = True, y_log: bool = False, x_log: bool = False, dga: bool = False):  # TODO documentation; parse parameters
     """
+    :param snooze: Switch off plots and audio.
     :param recordings: A mapping of locations to filenames to be processed.
     :param recordings_to_be_assigned: A mapping of estimated locations to filenames. The algorithm will search for the location of the respective files.
     :param path: The relative path from the working directory to the audio files
@@ -501,15 +503,15 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
             recordings_noise_only[place] = designaled_signals
 
             # Step 3: Optional: plot denoising spectrums
-            if plot_denoising_spectrums:
+            if plot_denoising_spectrums & (not snooze):
                 plot_denoise(recs, filename_graph_denoising=f'file_denoising_steps_environment_{place}')
 
         # Step 4: Optional plot environment spectrums
-        if plot_environment:
+        if plot_environment & (not snooze):
             plot_place_comparision(recordings, filename_graph_comparing=f'compare_denoised_files_environments')
 
         # Step 5: Optional: save audio files for environments
-        if audio_save:
+        if audio_save & (not snooze):
             save_audio_files(recordings, text='environment_')
 
         # Step 6: Denoise/devoice audio to be assigned
@@ -525,11 +527,11 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
             recordings_to_be_assigned_noise_only[place] = designaled_signals
 
             # Step 7: Optional: plot denoising spectrums
-            if plot_denoising_spectrums:
+            if plot_denoising_spectrums & (not snooze):
                 plot_denoise(recs, filename_graph_denoising=f'file_denoising_steps_assigning_{place}')
 
             # Step 8: Optional: save audio files for recordings to be assigned
-            if audio_save:
+            if audio_save & (not snooze):
                 save_audio_files(recordings, text='recording_')
 
     # Step 9: Detect environments and saves into file
@@ -546,22 +548,23 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
                     file.write(temp + "\n")
         ex.add_artifact(f'{dirpath}/{filename}', name=filename)
 
-    # Step X: Plot environments.
-    frequencies = np.fft.rfftfreq(256, 1 / rate)
-    for place, env in envs.items():
-        plt.scatter(frequencies, env, s=1, label=place)
-    # for row in all_data.T:
-    #    plt.scatter(frequencies, row, s=1)
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.xlim((rate / 256, rate / 2 + 1))
-    plt.ylim((10 ** 1, 10 ** 5))
-    plt.legend(loc="upper right")
-    plt.xlabel("frequency")
-    plt.ylabel("energy")
-    plt.title("Environment data")
-    with tempfile.TemporaryDirectory() as dirpath:
-        filename = "environments_fourier"
-        plt.savefig(f'{dirpath}/{filename}.png')
-        ex.add_artifact(f'{dirpath}/{filename}.png', name=filename + '.png')
-    plt.show()
+    if not snooze:
+        # Step X: Plot environments.
+        frequencies = np.fft.rfftfreq(256, 1 / rate)
+        for place, env in envs.items():
+            plt.scatter(frequencies, env, s=1, label=place)
+        # for row in all_data.T:
+        #    plt.scatter(frequencies, row, s=1)
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.xlim((rate / 256, rate / 2 + 1))
+        plt.ylim((10 ** 1, 10 ** 5))
+        plt.legend(loc="upper right")
+        plt.xlabel("frequency")
+        plt.ylabel("energy")
+        plt.title("Environment data")
+        with tempfile.TemporaryDirectory() as dirpath:
+            filename = "environments_fourier"
+            plt.savefig(f'{dirpath}/{filename}.png')
+            ex.add_artifact(f'{dirpath}/{filename}.png', name=filename + '.png')
+        # plt.show()

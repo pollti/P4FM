@@ -361,13 +361,18 @@ Neben der Ausführungsdatei in \texttt{run-experiment.sh}, die pip-Installation 
 recordings = {"environment_name": ["filename_environment"]}
 recordings_to_be_assigned = {"new": "filename_to_be_assigned"}
 \end{lstlisting}
-ersetzt werden bzw. äquivalent durch den (Sacred-Parameter ersetzenden) Aufruf
+ersetzt werden.
+
+Äquivalent können diese Zeilen glöscht werden, um dann den (Sacred-Parameter setzenden) Konsolen-Aufruf
 \begin{lstlisting}[numbers=left,stepnumber=5,firstnumber=1,numberfirstline=true,showstringspaces=false,language=Python]
 python src/main.py with
-	'recordings={"environment_name": ["filename_environment"]}'
+	'recordings={"envname": ["filename_environment"]}'
 	'recordings_to_be_assigned={"new": ["filename_to_be_assigned"]}'
 \end{lstlisting}
-Dadurch wird die Datei \texttt{Audio/filename\_to\_be\_assigned.wav} gegen die Umgebungsrauschen aus der Aufnahme \texttt{Audio/filename\_environment.wav} getestet (jeweils anpassbar entsprechend der Syntax für Python-Dictionaries). So können analog auch alle anderen Parameter aus der Methode \texttt{ex\_config} in einem Komandozeilenaufruf überschrieben werden.
+zu nutzen.
+Dadurch wird die Datei \texttt{Audio/filename\_to\_be\_assigned.wav} gegen die Umgebung aus der Aufnahme \texttt{Audio/filename\_environment.wav} getestet (jeweils anpassbar entsprechend der Syntax für Python-Dictionaries). So können analog auch alle anderen Parameter aus der Methode \texttt{ex\_config} in einem Komandozeilenaufruf geschrieben werden, wenn diese zuvor aus dem Code oben gelöscht wurden.
+
+Bei der Massenverarbeitung von Dateien ist es empfehlenswert den Paramter \texttt{snooze} auf \texttt{True} zu setzen, um keine Plots und Ausiodateien zu generieren. Dies führt zu signifikant besseren Laufzeiten.
 
 \subsection{Interpretation} 
 

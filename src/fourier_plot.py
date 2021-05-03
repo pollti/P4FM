@@ -132,4 +132,4 @@ def plot_fourier(rate: int, *signals: np.ndarray, size: int = 256):
     plt.xlim((rate / size, rate / 2 + 1))
     plt.ylim((10 ** 1, 10 ** 5))
     # plt.ylim(ymin=0)
-    plt.show()
+    # plt.show()
