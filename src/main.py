@@ -54,7 +54,7 @@ def ex_config():
     recordings_to_be_assigned_noise_only = None
     activate_multipass = False  # whether to use multipass approach for comparisions
     multipass_audio_files = activate_multipass  # whether to use multipass for audio file generation
-    generate_audio = True  # whether to generate the audio files (denoed, noise only) as well
+    audio_save = True  # whether to generate the audio files (denoised, noise only) as well
 
     # Graph properties
     show_graphs_denoising = [True, True, True]  # what to show graphs: [original, denoised, noise only]
@@ -252,7 +252,7 @@ def plot_spectrogram(signal: np.ndarray, rate: float, caption: str, ax, show_xla
 
 @ex.capture
 def plot_denoise(filenames: np.ndarray, filename_graph_denoising: str, show_graphs_denoising,
-                 denoising_graph_multipass: bool, path: str, generate_audio: bool):
+                 denoising_graph_multipass: bool, path: str):
     """
     Generates required files (denoised, noise) and plots spectrograms.
     :param filenames: files to process as list. Files are rows.
@@ -276,8 +276,6 @@ def plot_denoise(filenames: np.ndarray, filename_graph_denoising: str, show_grap
                 maxval=plottypes * len(filenames)).start()
             for i, filename in enumerate(filenames):
                 time_vec, signal, rate = read_audio(path + filename)
-                if generate_audio:
-                    generate_exemplary_audio()
                 #### START debugging shortener - ignore if not debugging. Used to reduce signal length for faster testing.
                 # fact = 1
                 # end = rate
@@ -459,7 +457,7 @@ def save_audio_files(recordings: dict, path: str, multipass_audio_files: bool, t
 
 @ex.automain
 def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: str, envs: np.ndarray, de_signaled: bool, frequency_aggregation_method: AggregationMethod,
-         window_aggregation_method: AggregationMethod, recordings_to_be_assigned_noise_only: dict, activate_multipass: bool, audio_save: bool = True, plot_environment: bool = True,
+         window_aggregation_method: AggregationMethod, recordings_to_be_assigned_noise_only: dict, activate_multipass: bool, audio_save: bool, plot_environment: bool = True,
          plot_denoising_spectrums: bool = True, squared: bool = True, y_log: bool = False, x_log: bool = False, dga: bool = False):  # TODO documentation; parse parameters
     """
     :param recordings: A mapping of locations to filenames to be processed.

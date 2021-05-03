@@ -47,6 +47,7 @@ sorting=anyt
 \bibliography{literature}
 
 \usepackage{hologo}
+\usepackage{listings}
 
 \begin{document}
 
@@ -124,7 +125,7 @@ Unsere Implementierung ist in Python geschrieben. Das ermöglicht die Nutzung ef
 
 Zunächst lesen wir Audiospuren aus WAV-Dateien als Signalvektor ein. Unsere Audiodateien sind zunächst mit einem Gerät und ohne Rauschunterdrückung bzw. Lautstärkeadaption aufgenommene WAV-Dateien mit einer Samplerate von 44,1kHz und einer Tonspur. Die Software funktioniert jedoch auch mit anderen Frequenzen und kann auch Stereo-Dateien einlesen, wobei die Analysen jedoch nur auf einer der Spuren ausgeführt werden.
 
-Unsere vollständige Implementierung sowie eine Liste der benötigten pip-Pakete und ein Beispielskript zur Nutzung der Software sind unter \cite{blumer_polltip4fm_2020} zu finden. % TODO noch nicht öffentlich bzw. Skript nicht existent.
+Unsere vollständige Implementierung sowie eine Liste der benötigten pip-Pakete und ein Beispielskript zur Nutzung der Software sind unter \cite{blumer_polltip4fm_2020} zu finden.
 
 \IMRADlabel{methods}
 \subsection{Rauschextraktion}
@@ -353,6 +354,20 @@ In der Datei \texttt{src/main.py}, können Funktionalitäten (de-)aktiviert werd
 \paragraph{Plots} (Code-Kommentar „\texttt{Graph properties}“): Hier können Einstellungen zu den Grafiken festgelegt werden, also bspw. Dateinamen, Aktivierung des Multipass-Ansatzes usw.
 
 \paragraph{Metriken} (Code-Kommentar „\texttt{Comparision metric parameters}“): Die in Abschnitt \ref{envdetect} genannten Metrikanpassungen können eingestellt werden.
+
+\subsection{Minimalbesipiel}
+Neben der Ausführungsdatei in \texttt{run-experiment.sh}, die pip-Installation usw. darstellt, bieten wir noch ein Minimalbeispiel, das auf nur einer Umgebungsdatei und nur einer zuzuordnenden Datei arbeitet. Dazu können die Zeilen 42-49 durch
+\begin{lstlisting}[numbers=left,language=Python]
+recordings = {"environment_name": ["filename_environment"]}
+recordings_to_be_assigned = {"new": "filename_to_be_assigned"}
+\end{lstlisting}
+ersetzt werden bzw. äquivalent durch den (Sacred-Parameter ersetzenden) Aufruf
+\begin{lstlisting}[numbers=left,stepnumber=5,firstnumber=1,numberfirstline=true,showstringspaces=false,language=Python]
+python src/main.py with
+	'recordings={"environment_name": ["filename_environment"]}'
+	'recordings_to_be_assigned={"new": ["filename_to_be_assigned"]}'
+\end{lstlisting}
+Dadurch wird die Datei \texttt{Audio/filename\_to\_be\_assigned.wav} gegen die Umgebungsrauschen aus der Aufnahme \texttt{Audio/filename\_environment.wav} getestet (jeweils anpassbar entsprechend der Syntax für Python-Dictionaries). So können analog auch alle anderen Parameter aus der Methode \texttt{ex\_config} in einem Komandozeilenaufruf überschrieben werden.
 
 \subsection{Interpretation} 
 
