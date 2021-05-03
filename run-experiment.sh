@@ -26,4 +26,4 @@ else
     source venv/bin/activate
 fi
 
-PYTHONPATH=. python src/main.py
+PYTHONPATH=. python src/main.py with ex_config_example
