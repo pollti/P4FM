@@ -484,7 +484,8 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
     # segment(signal[:44100], 256)
     envs = {}  # Mapping from place to calculated environment
     rate = 44100  # default value avoids crashes when plotting
-
+    
+    # Step 1: Read audio files for environments & denoise/devoice
     if not de_signaled:
         recordings_noise_only = {}
         recordings_to_be_assigned_noise_only = {}
@@ -497,21 +498,23 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
                 _, designaled_signal, _, _, _ = denoise_audio(signal, rate, activate_multipass)
                 designaled_signals.append(designaled_signal)
 
+            # Step 2: Generate environments as ndarray
             envs[place] = fourier_plot.environment_generator(designaled_signals, window_aggregation_method)
             recordings_noise_only[place] = designaled_signals
 
-            # Optional: plot denoising spectrums
+            # Step 3: Optional: plot denoising spectrums
             if plot_denoising_spectrums:
                 plot_denoise(recs, filename_graph_denoising=f'file_denoising_steps_environment_{place}')
 
-        # Optional plot environment spectrums
+        # Step 4: Optional plot environment spectrums
         if plot_environment:
             plot_place_comparision(recordings, filename_graph_comparing=f'compare_denoised_files_environments')
 
-        # Optional: save audio files
+        # Step 5: Optional: save audio files for environments
         if audio_save:
             save_audio_files(recordings, text='environment_')
 
+        # Step 6: Denoise/devoice audio to be assigned
         for place, recs in recordings_to_be_assigned.items():
             signals = []
             designaled_signals = []
@@ -523,15 +526,15 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
 
             recordings_to_be_assigned_noise_only[place] = designaled_signals
 
-            # Optional: plot denoising spectrums
+            # Step 7: Optional: plot denoising spectrums
             if plot_denoising_spectrums:
                 plot_denoise(recs, filename_graph_denoising=f'file_denoising_steps_assigning_{place}')
 
-            # Optional: save audio files
+            # Step 8: Optional: save audio files for recordings to be assigned
             if audio_save:
                 save_audio_files(recordings, text='recording_')
 
-    # Detect environments and saves into file
+    # Step 9: Detect environments and saves into file
     with tempfile.TemporaryDirectory() as dirpath:
         filename = "environment_errors.csv"
         with open(f'{dirpath}/{filename}', "w") as file:
@@ -545,7 +548,7 @@ def main(recordings: dict, recordings_to_be_assigned: dict, path: str, ending: s
                     file.write(temp + "\n")
         ex.add_artifact(f'{dirpath}/{filename}', name=filename)
 
-    # Plot environments.
+    # Step X: Plot environments.
     frequencies = np.fft.rfftfreq(256, 1 / rate)
     for place, env in envs.items():
         plt.scatter(frequencies, env, s=1, label=place)
