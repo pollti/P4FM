@@ -330,7 +330,7 @@ Nach Änderung des Codes müssen die erforderlichen pakete ggf. durch \texttt{pi
 
 \subsection{Ausführung}
 
-Durch Ausführen von \texttt{python main.py} im Ordner \texttt{src} wird der Code ausgeführt. Dazu müssen vorher die Paramter angepasst werden und ggf. die benötigten Audiodateien entsprechend der Parameter und Ordnerstruktur hinterlegt werden.
+Durch Ausführen von \texttt{python main.py} im Ordner \texttt{src} wird der Code ausgeführt. Dazu müssen vorher die Paramter angepasst oder übergeben werden und ggf. die benötigten Audiodateien entsprechend der Parameter und Ordnerstruktur hinterlegt werden.
 
 Ein Beispielskript zur Ausführung unter Linux wird bereitgestellt.
 
@@ -347,32 +347,28 @@ Es gibt die folgenden Ordner:
 \texttt{results}: Hier liegt die Projektdokumentation sowie eine Visualisierungsvorlage.
 
 \subsection{Parametrisierung}
-In der Datei \texttt{src/main.py}, können Funktionalitäten (de-)aktiviert werden und Parameter, wie bspw. die zu verarbeitenden Audiodateien) gesetzt werden. Im Code sind kurze Beschreibungen der einzelnen Einstellungen gegeben.
+In der Datei \texttt{src/main.py} oder über Parameter, können Funktionalitäten (de-)aktiviert werden und Parameter, wie bspw. die zu verarbeitenden Audiodateien) gesetzt werden. Im Code sind kurze Beschreibungen der einzelnen Einstellungen gegeben.
 
-\paragraph{Audio} (Code-Kommentar „\texttt{Comparision metric parameters}“): Hier werden die Audiodateien festgelegt. Dazu gibt es ein Mapping von bekannten Umgebungen zu den dort erstellten Aufnahmen. Anschließend können weitere Aufnahmen festgelegt werden, die nun (so wie auch die Dateien zur Umgebungsgenerierung) den Umgebungen zugeordnet werden. Außerdem kann die Generierung von Audiodateien (ohne Rauschen / reines Rauschen) (de-)aktiviert werden.
+\paragraph{Audio} (Code-Kommentar „\texttt{Audio settings}“): Hier werden die Audiodateien festgelegt. Dazu gibt es ein Mapping von bekannten Umgebungen zu den dort erstellten Aufnahmen. Anschließend können weitere Aufnahmen festgelegt werden, die nun (so wie auch die Dateien zur Umgebungsgenerierung) den Umgebungen zugeordnet werden. Außerdem kann die Generierung von Audiodateien (ohne Rauschen / reines Rauschen) (de-)aktiviert werden.
 
 \paragraph{Plots} (Code-Kommentar „\texttt{Graph properties}“): Hier können Einstellungen zu den Grafiken festgelegt werden, also bspw. Dateinamen, Aktivierung des Multipass-Ansatzes usw.
 
 \paragraph{Metriken} (Code-Kommentar „\texttt{Comparision metric parameters}“): Die in Abschnitt \ref{envdetect} genannten Metrikanpassungen können eingestellt werden.
 
 \subsection{Minimalbesipiel}
-Neben der Ausführungsdatei in \texttt{run-experiment.sh}, die pip-Installation usw. darstellt, bieten wir noch ein Minimalbeispiel, das auf nur einer Umgebungsdatei und nur einer zuzuordnenden Datei arbeitet. Dazu können die Zeilen 42-49 durch
-\begin{lstlisting}[numbers=left,language=Python]
-recordings = {"environment_name": ["filename_environment"]}
-recordings_to_be_assigned = {"new": "filename_to_be_assigned"}
-\end{lstlisting}
-ersetzt werden.
-
-Äquivalent können diese Zeilen glöscht werden, um dann den (Sacred-Parameter setzenden) Konsolen-Aufruf
+Neben der Ausführungsdatei in \texttt{run-experiment.sh}, die pip-Installation usw. darstellt, bieten wir noch ein Minimalbeispiel, das auf nur einer Umgebungsdatei und nur einer zuzuordnenden Datei arbeitet.
+Dazu können diese Zeilen kann die \texttt{main.py}, um dann den (Sacred-Parameter setzenden) Konsolen-Aufruf
 \begin{lstlisting}[numbers=left,stepnumber=5,firstnumber=1,numberfirstline=true,showstringspaces=false,language=Python]
 python src/main.py with
 	'recordings={"envname": ["filename_environment"]}'
 	'recordings_to_be_assigned={"new": ["filename_to_be_assigned"]}'
+	'snooze=True'
 \end{lstlisting}
-zu nutzen.
-Dadurch wird die Datei \texttt{Audio/filename\_to\_be\_assigned.wav} gegen die Umgebung aus der Aufnahme \texttt{Audio/filename\_environment.wav} getestet (jeweils anpassbar entsprechend der Syntax für Python-Dictionaries). So können analog auch alle anderen Parameter aus der Methode \texttt{ex\_config} in einem Komandozeilenaufruf geschrieben werden, wenn diese zuvor aus dem Code oben gelöscht wurden.
+zu nutzen.\footnote{Alternativ können weitere „named configs“ äquivalent zu Zeilen 67-77 angelegt werden, beispielsweise mit den Parametern wie im o.~g. Konsolenaufruf.
+}
+Dadurch wird die Datei \texttt{Audio/filename\_to\_be\_assigned.wav} gegen die Umgebung aus der Aufnahme \texttt{Audio/filename\_environment.wav} getestet (jeweils anpassbar entsprechend der Syntax für Python-Dictionaries). So können analog auch alle anderen Parameter aus der Methode \texttt{ex\_config} überschrieben werden.
 
-Bei der Massenverarbeitung von Dateien ist es empfehlenswert den Paramter \texttt{snooze} auf \texttt{True} zu setzen, um keine Plots und Ausiodateien zu generieren. Dies führt zu signifikant besseren Laufzeiten.
+Bei der Massenverarbeitung von Dateien ohne Interesse an den Medienausgaben ist es empfehlenswert den Paramter \texttt{snooze} auf \texttt{True} zu setzen, um keine Plots und Audiodateien zu generieren. Dies führt zu signifikant besseren Laufzeiten.
 
 \subsection{Interpretation} 
 
