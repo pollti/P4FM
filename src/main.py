@@ -39,15 +39,6 @@ def ex_config():
     # Audio settings
     path = "Audio/"  # The relative path to the recordings depends on working directory
     ending = ".wav"  # audio fileending, currently only supports .wav files
-    recordings = {"Raum1": ["Fabi01", "Fabi02", "Fabi03", "Fabi04", "Fabi05"],
-                  "Raum2": ["Tim01", "Tim02", "Tim03", "Tim04", "Tim05"],
-                  "Platz": ["Platz01", "Platz02", "Platz03", "Platz04", "Platz05"],
-                  "Strasse": ["Street01", "Street02", "Street03", "Street04", "Street05"],
-                  "Treppe": ["Treppe01", "Treppe02", "Treppe03", "Treppe04", "Treppe05"],
-                  "Wald": ["Wald01", "Wald02", "Wald03", "Wald04", "Wald05"]}  # filenames assigned to location
-    recordings_to_be_assigned = deepcopy(
-        recordings)  # deepcopy notwendig um nicht nur die Referenz zu kopieren, for this default case we want to assign the already assigned data to see how acurate it works
-    recordings_to_be_assigned["unknown"] = ["Fabi01"]  # put one file for test purpose
     ## Give noise_only files and environments here instead of the parameters above, if de_signaled = False - not recommended
     envs = None
     recordings_noise_only = None
@@ -72,6 +63,17 @@ def ex_config():
     frequency_aggregation_method: AggregationMethod = AggregationMethod.MEAN  # Aggregation method over frequencies in window
     window_aggregation_method: AggregationMethod = AggregationMethod.MEDIAN  # Aggregation method over different windows
 
+@ex.named_config
+def ex_config_example():
+    recordings = {"Raum1": ["Fabi01", "Fabi02", "Fabi03", "Fabi04", "Fabi05"],
+                  "Raum2": ["Tim01", "Tim02", "Tim03", "Tim04", "Tim05"],
+                  "Platz": ["Platz01", "Platz02", "Platz03", "Platz04", "Platz05"],
+                  "Strasse": ["Street01", "Street02", "Street03", "Street04", "Street05"],
+                  "Treppe": ["Treppe01", "Treppe02", "Treppe03", "Treppe04", "Treppe05"],
+                  "Wald": ["Wald01", "Wald02", "Wald03", "Wald04", "Wald05"]}  # filenames assigned to location
+    recordings_to_be_assigned = deepcopy(
+        recordings)  # deepcopy notwendig um nicht nur die Referenz zu kopieren, for this default case we want to assign the already assigned data to see how acurate it works
+    recordings_to_be_assigned["unknown"] = ["Fabi01"]  # put one file for test purpose
 
 def get_speech_postions(signal: np.ndarray, rate: float) -> Tuple[np.ndarray, int]:
     """
